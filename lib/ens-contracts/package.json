@@ -31,7 +31,7 @@
     "@ensdomains/hardhat-chai-matchers-viem": "^0.0.6",
     "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",
     "@types/mocha": "^9.1.1",
-    "@types/node": "^18.0.0",
+    "@types/node": "^22.0.0",
     "@viem/anvil": "^0.0.10",
     "@vitest/expect": "^1.6.0",
     "abitype": "^1.0.2",
