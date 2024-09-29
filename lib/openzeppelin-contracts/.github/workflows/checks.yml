@@ -102,7 +102,7 @@ jobs:
       - name: Set up environment
         uses: ./.github/actions/setup
       - run: rm foundry.toml
-      - uses: crytic/slither-action@v0.3.0
+      - uses: crytic/slither-action@v0.4.0
         with:
           node-version: 18.15
 
