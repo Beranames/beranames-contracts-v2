@@ -33,7 +33,7 @@
     "@types/mocha": "^9.1.1",
     "@types/node": "^18.0.0",
     "@viem/anvil": "^0.0.10",
-    "@vitest/expect": "^1.6.0",
+    "@vitest/expect": "^2.0.0",
     "abitype": "^1.0.2",
     "chai": "^5.1.1",
     "dotenv": "^16.4.5",
