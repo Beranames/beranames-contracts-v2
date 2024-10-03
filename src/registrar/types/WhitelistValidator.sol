@@ -37,7 +37,7 @@ contract WhitelistValidator is Ownable {
         uint8 v, bytes32 r, bytes32 s
     ) public view {
         // Decode and validate the payload
-        (address sender_) = abi.decode(message, (address));
+        (address sender_, ) = abi.decode(message, (address, uint256));
         if (sender_ != msg.sender)
             revert InvalidPayload();
 

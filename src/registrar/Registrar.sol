@@ -5,7 +5,6 @@ import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.so
 import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "lib/openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import {Strings} from "lib/openzeppelin-contracts/contracts/utils/Strings.sol";
 
 
 import {BaseRegistrar} from "src/registrar/types/BaseRegistrar.sol";
@@ -16,10 +15,11 @@ import {IPriceOracle} from "src/registrar/interfaces/IPriceOracle.sol";
 import {IReverseRegistrar} from "src/registrar/interfaces/IReverseRegistrar.sol";
 
 import {BERA_NODE, GRACE_PERIOD} from "src/utils/Constants.sol";
+import {StringUtils} from "src/utils/StringUtils.sol";
 
 /// @title Registrar Controller
 contract RegistrarController is Ownable {
-    using Strings for *;
+    using StringUtils for string;
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
@@ -33,6 +33,9 @@ contract RegistrarController is Ownable {
     /// @param duration The duration that was too short.
     error DurationTooShort(uint256 duration);
 
+    /// @notice Thrown when the public sale is not live.
+    error PublicSaleNotLive();
+
     /// @notice Thrown when Multicallable resolver data was specified but not resolver address was provided.
     error ResolverRequiredWhenDataSupplied();
 
@@ -41,6 +44,9 @@ contract RegistrarController is Ownable {
 
     /// @notice Thrown when the payment receiver is being set to address(0).
     error InvalidPaymentReceiver();
+
+    /// @notice Thrown when a signature has already been used.
+    error SignatureAlreadyUsed();
 
     /// @notice Thrown when a refund transfer is unsuccessful.
     error TransferFailed();
@@ -112,6 +118,9 @@ contract RegistrarController is Ownable {
     /// @notice The implementation of the Reverse Registrar contract.
     IReverseRegistrar public reverseRegistrar;
 
+    /// @notice The address of the whitelist validator contract.
+    IWhitelistValidator public whitelistValidator;
+
     /// @notice The node for which this name enables registration. It must match the `rootNode` of `base`.
     bytes32 public immutable rootNode;
 
@@ -120,6 +129,9 @@ contract RegistrarController is Ownable {
 
     /// @notice The address that will receive ETH funds upon `withdraw()` being called.
     address public paymentReceiver;
+
+    /// @notice The mapping of used signatures.
+    mapping(bytes32 => bool) public usedSignatures;
 
     /// @notice The timestamp of "go-live". Used for setting at-launch pricing premium.
     uint256 public launchTime;
@@ -155,6 +167,12 @@ contract RegistrarController is Ownable {
         _;
     }
 
+    /// @notice Decorator for validating that the public sale is live.
+    modifier publicSaleLive() {
+        if (block.timestamp < launchTime) revert PublicSaleNotLive();
+        _;
+    }
+
     /// Constructor ------------------------------------------------------
 
     /// @notice Registrar Controller construction sets all of the requisite external contracts.
@@ -171,6 +189,7 @@ contract RegistrarController is Ownable {
         BaseRegistrar base_,
         IPriceOracle prices_,
         IReverseRegistrar reverseRegistrar_,
+        IWhitelistValidator whitelistValidator_,
         address owner_,
         bytes32 rootNode_,
         string memory rootName_,
@@ -182,6 +201,7 @@ contract RegistrarController is Ownable {
         rootNode = rootNode_;
         rootName = rootName_;
         paymentReceiver = paymentReceiver_;
+        whitelistValidator = whitelistValidator_;
         reverseRegistrar.claim(owner_);
     }
 
@@ -230,8 +250,8 @@ contract RegistrarController is Ownable {
     /// @param name The name to check the length of.
     ///
     /// @return `true` if the name is equal to or longer than MIN_NAME_LENGTH, else `false`.
-    function valid(bytes memory name) public pure returns (bool) {
-        return name.length >= MIN_NAME_LENGTH;
+    function valid(string memory name) public pure returns (bool) {
+        return name.strlen() >= MIN_NAME_LENGTH;
     }
 
     /// @notice Checks whether the provided `name` is available.
@@ -241,7 +261,7 @@ contract RegistrarController is Ownable {
     /// @return `true` if the name is `valid` and available on the `base` registrar, else `false`.
     function available(string memory name) public view returns (bool) {
         bytes32 label = keccak256(bytes(name));
-        return valid(abi.encodePacked(name)) && base.isAvailable(uint256(label));
+        return valid(name) && base.isAvailable(uint256(label));
     }
 
     /// @notice Checks the rent price for a provided `name` and `duration`.
@@ -272,18 +292,34 @@ contract RegistrarController is Ownable {
     ///     This `payable` method must receive appropriate `msg.value` to pass `_validatePayment()`.
     ///
     /// @param request The `RegisterRequest` struct containing the details for the registration.
-    function register(RegisterRequest calldata request) public payable validRegistration(request) {
+    function register(RegisterRequest calldata request) public payable publicSaleLive {
+        _register(request);
+    }
+
+    /// @notice Allows a whitelisted address to register a name.
+    ///
+    /// @dev Validates the registration details via the `validRegistration` modifier.
+    ///     This `payable` method must receive appropriate `msg.value` to pass `_validatePayment()`.
+    ///
+    /// @param request The `RegisterRequest` struct containing the details for the registration.
+    /// @param signature The signature of the whitelisted address.
+    function whitelistRegister(RegisterRequest calldata request, bytes calldata signature) public payable {
+        _validateWhitelist(request, signature);
+        _register(request);
+    }
+
+    /// @notice Internal helper for registering a name.
+    ///
+    /// @dev Validates the registration details via the `validRegistration` modifier.
+    ///     This `payable` method must receive appropriate `msg.value` to pass `_validatePayment()`.
+    ///
+    /// @param request The `RegisterRequest` struct containing the details for the registration.
+    function _register(RegisterRequest calldata request) internal validRegistration(request) {
         uint256 price = registerPrice(request.name, request.duration);
 
         _validatePayment(price);
-
-        _register(request);
-
+        _registerRequest(request);
         _refundExcessEth(price);
-    }
-
-    function whitelistRegister(RegisterRequest calldata request) public payable validRegistration(request) {
-        // TODO: Finish implementing - are these free? are these paid?
     }
 
     /// @notice Allows a caller to renew a name for a specified duration.
@@ -321,6 +357,32 @@ contract RegistrarController is Ownable {
         emit ETHPaymentProcessed(msg.sender, price);
     }
 
+    function _validateWhitelist(RegisterRequest calldata request, bytes calldata signature) internal {
+        // Break signature into r, s, v
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+        assembly {
+            r := calldataload(signature.offset)
+            s := calldataload(add(signature.offset, 32))
+            v := calldataload(add(signature.offset, 64))
+        }
+
+        // Encode payload
+        bytes memory payload = abi.encode(
+            request.owner,
+            request.duration
+        );
+
+        if (usedSignatures[keccak256(payload)]) revert SignatureAlreadyUsed();
+
+        // Validate signature
+        whitelistValidator.validateSignature(payload, v, r, s);
+
+        // Store the message hash in used signatures
+        usedSignatures[keccak256(payload)] = true;
+    }
+
     /// @notice Helper for deciding whether to include a launch-premium.
     ///
     /// @dev If the token returns a `0` expiry time, it hasn't been registered before. On launch, this will be true for all
@@ -344,7 +406,7 @@ contract RegistrarController is Ownable {
     ///     Emits `NameRegistered` upon successful registration.
     ///
     /// @param request The `RegisterRequest` struct containing the details for the registration.
-    function _register(RegisterRequest calldata request) internal {
+    function _registerRequest(RegisterRequest calldata request) internal {
         uint256 expires = base.registerWithRecord(
             uint256(keccak256(bytes(request.name))), request.owner, request.duration, request.resolver, 0
         );
