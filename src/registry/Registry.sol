@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.8.4;
 
 import {BNS} from "src/registry/interfaces/BNS.sol";
@@ -15,10 +16,17 @@ contract BeraNamesRegistry is BNS {
     mapping(bytes32 => Record) records;
     mapping(address => mapping(address => bool)) operators;
 
+    /// @notice Thrown when a node is not authorised for a modification.
+    /// @param node The node that was not authorised.
+    /// @param sender The address that attempted the modification.
+    error NotAuthorised(bytes32 node, address sender);
+
     // Permits modifications only by the owner of the specified node.
     modifier authorised(bytes32 node) {
-        address owner = records[node].owner;
-        require(owner == msg.sender || operators[owner][msg.sender]);
+        address nodeOwner = records[node].owner;
+        if (nodeOwner != msg.sender && !operators[nodeOwner][msg.sender]) {
+            revert NotAuthorised(node, msg.sender);
+        }
         _;
     }
 
