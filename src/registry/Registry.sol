@@ -45,12 +45,7 @@ contract BeraNamesRegistry is BNS {
      * @param resolver_ The address of the resolver.
      * @param ttl_ The TTL in seconds.
      */
-    function setRecord(
-        bytes32 node_,
-        address owner_,
-        address resolver_,
-        uint64 ttl_
-    ) external virtual override {
+    function setRecord(bytes32 node_, address owner_, address resolver_, uint64 ttl_) external virtual override {
         setOwner(node_, owner_);
         _setResolverAndTTL(node_, resolver_, ttl_);
     }
@@ -63,13 +58,11 @@ contract BeraNamesRegistry is BNS {
      * @param resolver_ The address of the resolver.
      * @param ttl_ The TTL in seconds.
      */
-    function setSubnodeRecord(
-        bytes32 node_,
-        bytes32 label_,
-        address owner_,
-        address resolver_,
-        uint64 ttl_
-    ) external virtual override {
+    function setSubnodeRecord(bytes32 node_, bytes32 label_, address owner_, address resolver_, uint64 ttl_)
+        external
+        virtual
+        override
+    {
         bytes32 subnode_ = setSubnodeOwner(node_, label_, owner_);
         _setResolverAndTTL(subnode_, resolver_, ttl_);
     }
@@ -79,10 +72,7 @@ contract BeraNamesRegistry is BNS {
      * @param node_ The node to transfer ownership of.
      * @param owner_ The address of the new owner.
      */
-    function setOwner(
-        bytes32 node_,
-        address owner_
-    ) public virtual override authorised(node_) {
+    function setOwner(bytes32 node_, address owner_) public virtual override authorised(node_) {
         _setOwner(node_, owner_);
         emit Transfer(node_, owner_);
     }
@@ -93,11 +83,13 @@ contract BeraNamesRegistry is BNS {
      * @param label_ The hash of the label specifying the subnode.
      * @param owner_ The address of the new owner.
      */
-    function setSubnodeOwner(
-        bytes32 node_,
-        bytes32 label_,
-        address owner_
-    ) public virtual override authorised(node_) returns (bytes32) {
+    function setSubnodeOwner(bytes32 node_, bytes32 label_, address owner_)
+        public
+        virtual
+        override
+        authorised(node_)
+        returns (bytes32)
+    {
         bytes32 subnode = keccak256(abi.encodePacked(node_, label_));
         _setOwner(subnode, owner_);
         emit NewOwner(node_, label_, owner_);
@@ -109,10 +101,7 @@ contract BeraNamesRegistry is BNS {
      * @param node_ The node to update.
      * @param resolver_ The address of the resolver.
      */
-    function setResolver(
-        bytes32 node_,
-        address resolver_
-    ) public virtual override authorised(node_) {
+    function setResolver(bytes32 node_, address resolver_) public virtual override authorised(node_) {
         emit NewResolver(node_, resolver_);
         records[node_].resolver = resolver_;
     }
@@ -122,10 +111,7 @@ contract BeraNamesRegistry is BNS {
      * @param node_ The node to update.
      * @param ttl_ The TTL in seconds.
      */
-    function setTTL(
-        bytes32 node_,
-        uint64 ttl_
-    ) public virtual override authorised(node_) {
+    function setTTL(bytes32 node_, uint64 ttl_) public virtual override authorised(node_) {
         emit NewTTL(node_, ttl_);
         records[node_].ttl = ttl_;
     }
@@ -136,10 +122,7 @@ contract BeraNamesRegistry is BNS {
      * @param operator_ Address to add to the set of authorized operators.
      * @param approved_ True if the operator is approved, false to revoke approval.
      */
-    function setApprovalForAll(
-        address operator_,
-        bool approved_
-    ) external virtual override {
+    function setApprovalForAll(address operator_, bool approved_) external virtual override {
         operators[msg.sender][operator_] = approved_;
         emit ApprovalForAll(msg.sender, operator_, approved_);
     }
@@ -149,9 +132,7 @@ contract BeraNamesRegistry is BNS {
      * @param node_ The specified node.
      * @return address of the owner.
      */
-    function owner(
-        bytes32 node_
-    ) public view virtual override returns (address) {
+    function owner(bytes32 node_) public view virtual override returns (address) {
         address addr_ = records[node_].owner;
         if (addr_ == address(this)) {
             return address(0x0);
@@ -165,9 +146,7 @@ contract BeraNamesRegistry is BNS {
      * @param node_ The specified node.
      * @return address of the resolver.
      */
-    function resolver(
-        bytes32 node_
-    ) public view virtual override returns (address) {
+    function resolver(bytes32 node_) public view virtual override returns (address) {
         return records[node_].resolver;
     }
 
@@ -185,9 +164,7 @@ contract BeraNamesRegistry is BNS {
      * @param node_ The specified node.
      * @return Bool if record exists
      */
-    function recordExists(
-        bytes32 node_
-    ) public view virtual override returns (bool) {
+    function recordExists(bytes32 node_) public view virtual override returns (bool) {
         return records[node_].owner != address(0x0);
     }
 
@@ -197,10 +174,7 @@ contract BeraNamesRegistry is BNS {
      * @param operator_ The address that acts on behalf of the owner.
      * @return True if `operator_` is an approved operator for `owner_`, false otherwise.
      */
-    function isApprovedForAll(
-        address owner_,
-        address operator_
-    ) external view virtual override returns (bool) {
+    function isApprovedForAll(address owner_, address operator_) external view virtual override returns (bool) {
         return operators[owner_][operator_];
     }
 
@@ -208,11 +182,7 @@ contract BeraNamesRegistry is BNS {
         records[node_].owner = owner_;
     }
 
-    function _setResolverAndTTL(
-        bytes32 node_,
-        address resolver_,
-        uint64 ttl_
-    ) internal {
+    function _setResolverAndTTL(bytes32 node_, address resolver_, uint64 ttl_) internal {
         if (resolver_ != records[node_].resolver) {
             records[node_].resolver = resolver_;
             emit NewResolver(node_, resolver_);

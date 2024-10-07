@@ -27,7 +27,6 @@ import {TextResolver} from "src/resolver/profiles/TextResolver.sol";
 contract BeraDefaultResolver is
     // Accessability Controller
     Multicallable,
-
     // Resolvers
     ABIResolver,
     AddrResolver,
@@ -38,11 +37,9 @@ contract BeraDefaultResolver is
     PubkeyResolver,
     TextResolver,
     ExtendedResolver,
-
     // Admin Controller
     Ownable
 {
-
     /// Errors -----------------------------------------------------------
 
     /// @notice Thown when msg.sender tries to set itself as an operator/delegate.

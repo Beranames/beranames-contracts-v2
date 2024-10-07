@@ -7,9 +7,7 @@ import {ADDR_REVERSE_NODE} from "src/utils/Constants.sol";
 
 contract ReverseClaimer {
     constructor(BNS bns, address claimant) {
-        IReverseRegistrar reverseRegistrar = IReverseRegistrar(
-            bns.owner(ADDR_REVERSE_NODE)
-        );
+        IReverseRegistrar reverseRegistrar = IReverseRegistrar(bns.owner(ADDR_REVERSE_NODE));
         reverseRegistrar.claim(claimant);
     }
 }
