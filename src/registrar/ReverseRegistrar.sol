@@ -1,6 +1,6 @@
 pragma solidity >=0.8.4;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 import {BNS} from "src/registry/interfaces/BNS.sol";
 import {IReverseRegistrar} from "src/registrar/interfaces/IReverseRegistrar.sol";
@@ -22,14 +22,7 @@ contract ReverseRegistrar is Controllable, IReverseRegistrar {
      */
     constructor(BNS registry_) Controllable(msg.sender) {
         registry = registry_;
-
-        // Assign ownership of the reverse record to our deployer
-        ReverseRegistrar oldRegistrar = ReverseRegistrar(
-            registry_.owner(ADDR_REVERSE_NODE)
-        );
-        if (address(oldRegistrar) != address(0x0)) {
-            oldRegistrar.claim(msg.sender);
-        }
+        // Note: caller needs to assign ownership of the reverse record to the registrar
     }
 
     modifier authorised(address addr) {
@@ -79,8 +72,8 @@ contract ReverseRegistrar is Controllable, IReverseRegistrar {
         bytes32 reverseNode = keccak256(
             abi.encodePacked(ADDR_REVERSE_NODE, labelHash)
         );
-        emit ReverseClaimed(addr, reverseNode);
         registry.setSubnodeRecord(ADDR_REVERSE_NODE, labelHash, owner, resolver, 0);
+        emit ReverseClaimed(addr, reverseNode);
         return reverseNode;
     }
 

@@ -15,3 +15,5 @@ uint256 constant GRACE_PERIOD = 30 days;
 
 // @param RECLAIM_ID InterfaceId for the Reclaim interface
 bytes4 constant RECLAIM_ID = bytes4(keccak256("reclaim(uint256,address)"));
+
+uint64 constant DEFAULT_TTL = 3600;

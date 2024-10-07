@@ -296,7 +296,7 @@ contract RegistrarController is Ownable {
         uint256 duration
     ) public view returns (uint256) {
         IPriceOracle.Price memory price = rentPrice(name, duration);
-        return price.base + price.premium;
+        return price.base - price.discount;
     }
 
     /// @notice Enables a caller to register a name.

@@ -3,7 +3,9 @@ pragma solidity ^0.8.0;
 
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
-contract WhitelistValidator is Ownable {
+import {IWhitelistValidator} from "src/registrar/interfaces/IWhitelistValidator.sol";
+
+contract WhitelistValidator is Ownable, IWhitelistValidator {
 
     /// Errors -----------------------------------------------------------
 

@@ -1,6 +1,6 @@
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract Controllable is Ownable {
     mapping(address => bool) public controllers;

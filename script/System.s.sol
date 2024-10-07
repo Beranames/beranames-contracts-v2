@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-/// Core imports
+import {Script, console} from "forge-std/Script.sol";
 
 import {BNS} from "src/registry/interfaces/BNS.sol";
 import {BeraNamesRegistry} from "src/registry/Registry.sol";
@@ -19,11 +19,7 @@ import {
     DEFAULT_TTL
 } from "src/utils/Constants.sol";
 
-/// Test imports
-
-import {BaseTest} from "./Base.t.sol";
-
-contract SystemTest is BaseTest {
+contract ContractScript is Script {
     // Layer 1: BNS Registry
     BNS public registry;
 
@@ -35,12 +31,16 @@ contract SystemTest is BaseTest {
     // Layer 3: Public Registrar
     RegistrarController public registrar;
 
-    function setUp() public override {
-        // Setup base test
-        super.setUp();
+    // Addresses
+    // TODO: Update these with the correct addresses
+    address public deployer = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+    address public registrarAdmin = address(0x123);
+    address public signer = address(0x1234);
 
-        // Prank deployer
-        vm.startPrank(deployer);
+    function setUp() public {}
+
+    function run() public {
+        vm.startBroadcast();
 
         // Deploy layer 1 components: registry
         registry = new BeraNamesRegistry();
@@ -50,8 +50,8 @@ contract SystemTest is BaseTest {
             registry,
             address(deployer),
             BERA_NODE,
-            "https://beranames.xyz/metadata/",
-            "https://beranames.xyz/collection.json"
+            "https://beranames.xyz/metadata/", // TODO: Update this with the correct metadata URL
+            "https://beranames.xyz/collection.json" // TODO: Update this with the correct collection URL
         );
 
         // Create the reverse registrar        
@@ -117,6 +117,8 @@ contract SystemTest is BaseTest {
         );
         baseRegistrar.addController(address(registrar));
 
+        // TODO: Add test domains / initial mints here
+
         // Transfer ownership to registrar admin 
         // root node
         registry.setOwner(bytes32(0), address(registrarAdmin));
@@ -126,36 +128,7 @@ contract SystemTest is BaseTest {
         reverseRegistrar.setController(address(registrarAdmin), true);
         reverseRegistrar.transferOwnership(address(registrarAdmin));
 
-        // Stop pranking
-        vm.stopPrank();
+        // Stop broadcast
+        vm.stopBroadcast();
     }
-
-    function test_initialized() public {
-        assertEq(registry.owner(BERA_NODE), address(baseRegistrar), "BERA_NODE owner");
-        assertEq(registry.owner(ADDR_REVERSE_NODE), address(reverseRegistrar), "ADDR_REVERSE_NODE owner");
-        assertEq(registry.resolver(BERA_NODE), address(resolver), "BERA_NODE resolver");
-        assertEq(registry.resolver(ADDR_REVERSE_NODE), address(0), "ADDR_REVERSE_NODE resolver");
-        assertEq(baseRegistrar.owner(), address(registrarAdmin), "baseRegistrar owner");
-        assertEq(reverseRegistrar.owner(), address(registrarAdmin), "reverseRegistrar owner");
-        assertEq(address(resolver.owner()), address(registrarAdmin), "resolver owner");
-    }
-
-    function test_register__basic_success() public {
-        // // Prank alice
-        // vm.startPrank(alice);
-
-        // // Register a name
-        // registrar.register(alice, "alice.beranames", 1, Payment.ETH);
-
-        // // Stop pranking
-        // vm.stopPrank();
-    }
-
-    // function test_XXX() public {
-    //     assertEq(1, 1);
-    // }
-
-    // function testFuzz_XXX(uint256 x) public {
-    //     assertEq(x, x);
-    // }
 }

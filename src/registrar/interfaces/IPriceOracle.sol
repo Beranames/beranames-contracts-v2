@@ -8,34 +8,34 @@ interface IPriceOracle {
         STABLE
     }
 
-    /// @notice The price for a given name.
+    /// @notice The price for a given label.
     struct Price {
         uint256 base;
-        uint256 premium;
+        uint256 discount;
     }
 
-    /// @notice The price for a given name.
+    /// @notice The price for a given label.
     /// This assumes a default payment method of ETH.
-    /// @param name The name to query.
-    /// @param expires The expiry of the name.
+    /// @param label The label to query.
+    /// @param expires The expiry of the label.
     /// @param duration The duration of the registration.
-    /// @return The price of the name.
+    /// @return The price of the label.
     function price(
-        string calldata name, 
+        string calldata label, 
         uint256 expires, 
         uint256 duration
-    ) external view returns (Price calldata);
+    ) external view returns (Price memory);
 
-    /// @notice The price for a given name.
-    /// @param name The name to query.
-    /// @param expires The expiry of the name.
+    /// @notice The price for a given label.
+    /// @param label The label to query.
+    /// @param expires The expiry of the label.
     /// @param duration The duration of the registration.
     /// @param payment The payment method.
-    /// @return The price of the name.
+    /// @return The price of the label.
     function price(
-        string calldata name, 
+        string calldata label, 
         uint256 expires, 
         uint256 duration,
         Payment payment
-    ) external view returns (Price calldata);
+    ) external view returns (Price memory);
 }
