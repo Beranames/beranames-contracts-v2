@@ -12,13 +12,9 @@ import {RegistrarController} from "src/registrar/Registrar.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
+import {IWhitelistValidator} from "src/registrar/interfaces/IWhitelistValidator.sol";
 
-import {
-    BERA_NODE,
-    ADDR_REVERSE_NODE,
-    REVERSE_NODE,
-    DEFAULT_TTL
-} from "src/utils/Constants.sol";
+import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 
 contract ContractScript is Script {
     // Layer 1: BNS Registry
@@ -59,32 +55,21 @@ contract ContractScript is Script {
             "https://beranames.xyz/collection.json" // TODO: Update this with the correct collection URL
         );
 
-        // Create the reverse registrar        
+        // Create the reverse registrar
         reverseRegistrar = new ReverseRegistrar(registry);
 
         // Transfer ownership of the reverse node to the registrar
         registry.setSubnodeRecord(
-            bytes32(0),
-            keccak256(abi.encodePacked("reverse")),
-            address(deployer),
-            address(0),
-            DEFAULT_TTL
+            bytes32(0), keccak256(abi.encodePacked("reverse")), address(deployer), address(0), DEFAULT_TTL
         );
         registry.setSubnodeRecord(
-            REVERSE_NODE,
-            keccak256(abi.encodePacked("addr")),
-            address(reverseRegistrar),
-            address(0),
-            DEFAULT_TTL
+            REVERSE_NODE, keccak256(abi.encodePacked("addr")), address(reverseRegistrar), address(0), DEFAULT_TTL
         );
         registry.setOwner(REVERSE_NODE, address(registrarAdmin));
 
         // Create the resolver
         resolver = new BeraDefaultResolver(
-            registry,
-            address(baseRegistrar),
-            address(reverseRegistrar),
-            address(registrarAdmin)
+            registry, address(baseRegistrar), address(reverseRegistrar), address(registrarAdmin)
         );
 
         // Set the resolver for the base node
@@ -92,22 +77,15 @@ contract ContractScript is Script {
 
         // Create the bere node and set registrar/resolver
         registry.setSubnodeRecord(
-            bytes32(0),
-            keccak256(abi.encodePacked("bera")),
-            address(baseRegistrar),
-            address(resolver),
-            DEFAULT_TTL
+            bytes32(0), keccak256(abi.encodePacked("bera")), address(baseRegistrar), address(resolver), DEFAULT_TTL
         );
 
         // Deploy layer 3 components: public registrar
         // Create the PriceOracle
         priceOracle = new PriceOracle();
-        
+
         // Create the WhitelistValidator
-        whitelistValidator = new WhitelistValidator(
-            address(registrarAdmin),
-            address(signer)
-        );
+        whitelistValidator = new WhitelistValidator(address(registrarAdmin), address(signer));
 
         // Create the reserved registry
         reservedRegistry = new ReservedRegistry(address(registrarAdmin));
@@ -117,7 +95,7 @@ contract ContractScript is Script {
             baseRegistrar,
             priceOracle,
             reverseRegistrar,
-            whitelistValidator,
+            IWhitelistValidator(address(whitelistValidator)),
             reservedRegistry,
             address(registrarAdmin),
             BERA_NODE,
@@ -128,7 +106,7 @@ contract ContractScript is Script {
 
         // TODO: Add test domains / initial mints here
 
-        // Transfer ownership to registrar admin 
+        // Transfer ownership to registrar admin
         // root node
         registry.setOwner(bytes32(0), address(registrarAdmin));
         baseRegistrar.transferOwnership(address(registrarAdmin));

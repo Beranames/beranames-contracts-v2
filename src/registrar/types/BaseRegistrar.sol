@@ -66,11 +66,7 @@ contract BaseRegistrar is ERC721, Ownable {
     /// @param id The id of the registered name.
     /// @param owner The owner of the registered name.
     /// @param expires The expiry of the new ownership record.
-    event NameRegistered(
-        uint256 indexed id,
-        address indexed owner,
-        uint256 expires
-    );
+    event NameRegistered(uint256 indexed id, address indexed owner, uint256 expires);
 
     /// @notice Emitted when a name is renewed.
     ///
@@ -86,11 +82,7 @@ contract BaseRegistrar is ERC721, Ownable {
     /// @param resolver The address of the resolver for the name.
     /// @param ttl The time-to-live for the name.
     event NameRegisteredWithRecord(
-        uint256 indexed id,
-        address indexed owner,
-        uint256 expires,
-        address resolver,
-        uint64 ttl
+        uint256 indexed id, address indexed owner, uint256 expires, address resolver, uint64 ttl
     );
 
     /// @notice Emitted when metadata for a token range is updated.
@@ -133,8 +125,9 @@ contract BaseRegistrar is ERC721, Ownable {
 
     /// @notice Decorator for determining if the contract is actively managing registrations for its `baseNode`.
     modifier live() {
-        if (registry.owner(baseNode) != address(this))
+        if (registry.owner(baseNode) != address(this)) {
             revert RegistrarNotLive();
+        }
         _;
     }
 
@@ -169,13 +162,10 @@ contract BaseRegistrar is ERC721, Ownable {
     /// @param baseNode_ The node that this contract manages registrations for.
     /// @param tokenURI_ The base token URI for NFT metadata.
     /// @param collectionURI_ The URI for the collection's metadata.
-    constructor(
-        BNS registry_,
-        address owner_,
-        bytes32 baseNode_,
-        string memory tokenURI_,
-        string memory collectionURI_
-    ) ERC721("Beranames", unicode"🐻🪪") Ownable(owner_) {
+    constructor(BNS registry_, address owner_, bytes32 baseNode_, string memory tokenURI_, string memory collectionURI_)
+        ERC721("Beranames", unicode"🐻🪪")
+        Ownable(owner_)
+    {
         _transferOwnership(owner_);
         registry = registry_;
         baseNode = baseNode_;
@@ -214,11 +204,7 @@ contract BaseRegistrar is ERC721, Ownable {
     /// @param duration Duration in seconds for the registration.
     ///
     /// @return The expiry date of the registered name.
-    function register(
-        uint256 id,
-        address owner,
-        uint256 duration
-    ) external returns (uint256) {
+    function register(uint256 id, address owner, uint256 duration) external returns (uint256) {
         return _register(id, owner, duration, true);
     }
 
@@ -229,11 +215,7 @@ contract BaseRegistrar is ERC721, Ownable {
     /// @param duration Duration in seconds for the registration.
     ///
     /// @return The expiry date of the registered name.
-    function registerOnly(
-        uint256 id,
-        address owner,
-        uint256 duration
-    ) external returns (uint256) {
+    function registerOnly(uint256 id, address owner, uint256 duration) external returns (uint256) {
         return _register(id, owner, duration, false);
     }
 
@@ -243,13 +225,13 @@ contract BaseRegistrar is ERC721, Ownable {
     /// @param duration Duration in seconds for the registration.
     /// @param resolver Address of the resolver for the name.
     /// @param ttl Time-to-live for the name.
-    function registerWithRecord(
-        uint256 id,
-        address owner,
-        uint256 duration,
-        address resolver,
-        uint64 ttl
-    ) external live onlyController onlyAvailable(id) returns (uint256) {
+    function registerWithRecord(uint256 id, address owner, uint256 duration, address resolver, uint64 ttl)
+        external
+        live
+        onlyController
+        onlyAvailable(id)
+        returns (uint256)
+    {
         uint256 expiry = _localRegister(id, owner, duration);
         registry.setSubnodeRecord(baseNode, bytes32(id), owner, resolver, ttl);
         emit NameRegisteredWithRecord(id, owner, expiry, resolver, ttl);
@@ -260,9 +242,7 @@ contract BaseRegistrar is ERC721, Ownable {
     /// @dev Names become unowned when their registration expires.
     /// @param tokenId The id of the name to query the owner of.
     /// @return address The address currently marked as the owner of the given token ID.
-    function ownerOf(
-        uint256 tokenId
-    ) public view override onlyNonExpired(tokenId) returns (address) {
+    function ownerOf(uint256 tokenId) public view override onlyNonExpired(tokenId) returns (address) {
         return super.ownerOf(tokenId);
     }
 
@@ -278,13 +258,11 @@ contract BaseRegistrar is ERC721, Ownable {
     /// @param id The id of the name to renew.
     /// @param duration The time that will be added to this name's expiry.
     /// @return The new expiry date.
-    function renew(
-        uint256 id,
-        uint256 duration
-    ) external live onlyController returns (uint256) {
+    function renew(uint256 id, uint256 duration) external live onlyController returns (uint256) {
         uint256 expires = nameExpires[bytes32(id)];
-        if (expires + GRACE_PERIOD < block.timestamp)
+        if (expires + GRACE_PERIOD < block.timestamp) {
             revert NotRegisteredOrInGrace(id);
+        }
 
         expires += duration;
         nameExpires[bytes32(id)] = expires;
@@ -296,21 +274,18 @@ contract BaseRegistrar is ERC721, Ownable {
     /// @param id The id of the name to reclaim.
     /// @param owner The address of the owner that will be set in the Registry.
     function reclaim(uint256 id, address owner) external live {
-        if (!_isApprovedOrOwner(msg.sender, id))
+        if (!_isApprovedOrOwner(msg.sender, id)) {
             revert NotApprovedOwner(id, owner);
+        }
         registry.setSubnodeOwner(baseNode, bytes32(id), owner);
     }
 
     /// @notice ERC165 compliant signal for interface support.
     /// @param interfaceID the ERC165 iface id being checked for compliance
     /// @return bool Whether this contract supports the provided interfaceID
-    function supportsInterface(
-        bytes4 interfaceID
-    ) public pure override(ERC721) returns (bool) {
-        return
-            interfaceID == type(IERC165).interfaceId ||
-            interfaceID == type(IERC721).interfaceId ||
-            interfaceID == RECLAIM_ID;
+    function supportsInterface(bytes4 interfaceID) public pure override(ERC721) returns (bool) {
+        return interfaceID == type(IERC165).interfaceId || interfaceID == type(IERC721).interfaceId
+            || interfaceID == RECLAIM_ID;
     }
 
     /// ERC721 Implementation --------------------------------------------
@@ -319,15 +294,10 @@ contract BaseRegistrar is ERC721, Ownable {
     /// @dev Reverts if the `tokenId` has not be registered.
     /// @param tokenId The token for which to return the metadata uri.
     /// @return The URI for the specified `tokenId`.
-    function tokenURI(
-        uint256 tokenId
-    ) public view override returns (string memory) {
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
         if (_ownerOf(tokenId) == address(0)) revert NonexistentToken(tokenId);
 
-        return
-            bytes(_tokenURI).length > 0
-                ? string.concat(_tokenURI, tokenId.toString())
-                : "";
+        return bytes(_tokenURI).length > 0 ? string.concat(_tokenURI, tokenId.toString()) : "";
     }
 
     /// @notice Returns the Uniform Resource Identifier (URI) for the contract.
@@ -360,12 +330,13 @@ contract BaseRegistrar is ERC721, Ownable {
     /// @param updateRegistry Whether to update the Regstiry with the ownership change
     ///
     /// @return The expiry date of the registered name.
-    function _register(
-        uint256 id,
-        address owner,
-        uint256 duration,
-        bool updateRegistry
-    ) internal live onlyController onlyAvailable(id) returns (uint256) {
+    function _register(uint256 id, address owner, uint256 duration, bool updateRegistry)
+        internal
+        live
+        onlyController
+        onlyAvailable(id)
+        returns (uint256)
+    {
         uint256 expiry = _localRegister(id, owner, duration);
         if (updateRegistry) {
             registry.setSubnodeOwner(baseNode, bytes32(id), owner);
@@ -381,11 +352,7 @@ contract BaseRegistrar is ERC721, Ownable {
     /// @param duration Duration in seconds for the registration.
     ///
     /// @return expiry The expiry date of the registered name.
-    function _localRegister(
-        uint256 id,
-        address owner,
-        uint256 duration
-    ) internal returns (uint256 expiry) {
+    function _localRegister(uint256 id, address owner, uint256 duration) internal returns (uint256 expiry) {
         expiry = block.timestamp + duration;
         nameExpires[bytes32(id)] = expiry;
         if (_ownerOf(id) != address(0)) {
@@ -400,10 +367,12 @@ contract BaseRegistrar is ERC721, Ownable {
     /// @param tokenId uint256 ID of the token to be transferred
     /// @return `true` if msg.sender is approved for the given token ID, is an operator of the owner,
     ///         or is the owner of the token, else `false`.
-    function _isApprovedOrOwner(
-        address spender,
-        uint256 tokenId
-    ) internal view onlyNonExpired(tokenId) returns (bool) {
+    function _isApprovedOrOwner(address spender, uint256 tokenId)
+        internal
+        view
+        onlyNonExpired(tokenId)
+        returns (bool)
+    {
         address owner_ = _ownerOf(tokenId);
         return owner_ == spender || _isAuthorized(owner_, spender, tokenId);
     }

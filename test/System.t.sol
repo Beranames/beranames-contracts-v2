@@ -13,12 +13,7 @@ import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 
-import {
-    BERA_NODE,
-    ADDR_REVERSE_NODE,
-    REVERSE_NODE,
-    DEFAULT_TTL
-} from "src/utils/Constants.sol";
+import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 
 /// Test imports
 
@@ -55,32 +50,21 @@ contract SystemTest is BaseTest {
             "https://beranames.xyz/collection.json"
         );
 
-        // Create the reverse registrar        
+        // Create the reverse registrar
         reverseRegistrar = new ReverseRegistrar(registry);
 
         // Transfer ownership of the reverse node to the registrar
         registry.setSubnodeRecord(
-            bytes32(0),
-            keccak256(abi.encodePacked("reverse")),
-            address(deployer),
-            address(0),
-            DEFAULT_TTL
+            bytes32(0), keccak256(abi.encodePacked("reverse")), address(deployer), address(0), DEFAULT_TTL
         );
         registry.setSubnodeRecord(
-            REVERSE_NODE,
-            keccak256(abi.encodePacked("addr")),
-            address(reverseRegistrar),
-            address(0),
-            DEFAULT_TTL
+            REVERSE_NODE, keccak256(abi.encodePacked("addr")), address(reverseRegistrar), address(0), DEFAULT_TTL
         );
         registry.setOwner(REVERSE_NODE, address(registrarAdmin));
 
         // Create the resolver
         resolver = new BeraDefaultResolver(
-            registry,
-            address(baseRegistrar),
-            address(reverseRegistrar),
-            address(registrarAdmin)
+            registry, address(baseRegistrar), address(reverseRegistrar), address(registrarAdmin)
         );
 
         // Set the resolver for the base node
@@ -88,22 +72,15 @@ contract SystemTest is BaseTest {
 
         // Create the bere node and set registrar/resolver
         registry.setSubnodeRecord(
-            bytes32(0),
-            keccak256(abi.encodePacked("bera")),
-            address(baseRegistrar),
-            address(resolver),
-            DEFAULT_TTL
+            bytes32(0), keccak256(abi.encodePacked("bera")), address(baseRegistrar), address(resolver), DEFAULT_TTL
         );
 
         // Deploy layer 3 components: public registrar
         // Create the PriceOracle
         PriceOracle priceOracle = new PriceOracle();
-        
+
         // Create the WhitelistValidator
-        WhitelistValidator whitelistValidator = new WhitelistValidator(
-            address(registrarAdmin),
-            address(signer)
-        );
+        WhitelistValidator whitelistValidator = new WhitelistValidator(address(registrarAdmin), address(signer));
 
         // Create the reserved registry
         ReservedRegistry reservedRegistry = new ReservedRegistry(address(deployer));
@@ -122,7 +99,7 @@ contract SystemTest is BaseTest {
         );
         baseRegistrar.addController(address(registrar));
 
-        // Transfer ownership to registrar admin 
+        // Transfer ownership to registrar admin
         // root node
         registry.setOwner(bytes32(0), address(registrarAdmin));
         baseRegistrar.transferOwnership(address(registrarAdmin));
@@ -138,7 +115,7 @@ contract SystemTest is BaseTest {
         vm.warp(100_0000_0000);
     }
 
-    function test_initialized() public {
+    function test_initialized() public view {
         assertEq(registry.owner(BERA_NODE), address(baseRegistrar), "BERA_NODE owner");
         assertEq(registry.owner(ADDR_REVERSE_NODE), address(reverseRegistrar), "ADDR_REVERSE_NODE owner");
         assertEq(registry.resolver(BERA_NODE), address(resolver), "BERA_NODE resolver");
