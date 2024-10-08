@@ -99,7 +99,7 @@ contract ContractScript is Script {
             reservedRegistry,
             address(registrarAdmin),
             BERA_NODE,
-            "beranames",
+            "bera",
             address(registrarAdmin)
         );
         baseRegistrar.addController(address(registrar));

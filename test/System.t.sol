@@ -156,7 +156,7 @@ contract SystemTest is BaseTest {
         // vm.startPrank(alice);
 
         // // Register a name
-        // registrar.register(alice, "alice.beranames", 1, Payment.ETH);
+        // registrar.register(alice, "alice.bera", 1, Payment.ETH);
 
         // // Stop pranking
         // vm.stopPrank();
