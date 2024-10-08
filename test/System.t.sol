@@ -112,7 +112,7 @@ contract SystemTest is BaseTest {
             whitelistValidator,
             address(registrarAdmin),
             BERA_NODE,
-            "beranames",
+            "bera",
             address(registrarAdmin)
         );
         baseRegistrar.addController(address(registrar));
@@ -124,10 +124,13 @@ contract SystemTest is BaseTest {
 
         // admin control
         reverseRegistrar.setController(address(registrarAdmin), true);
-        reverseRegistrar.transferOwnership(address(registrarAdmin));
+        reverseRegistrar.setController(address(registrar), true);
+        reverseRegistrar.transferOwnership(address(registrar));
 
         // Stop pranking
         vm.stopPrank();
+
+        vm.warp(100_0000_0000);
     }
 
     function test_initialized() public {
@@ -136,11 +139,32 @@ contract SystemTest is BaseTest {
         assertEq(registry.resolver(BERA_NODE), address(resolver), "BERA_NODE resolver");
         assertEq(registry.resolver(ADDR_REVERSE_NODE), address(0), "ADDR_REVERSE_NODE resolver");
         assertEq(baseRegistrar.owner(), address(registrarAdmin), "baseRegistrar owner");
-        assertEq(reverseRegistrar.owner(), address(registrarAdmin), "reverseRegistrar owner");
+        assertEq(reverseRegistrar.owner(), address(registrar), "reverseRegistrar owner");
         assertEq(address(resolver.owner()), address(registrarAdmin), "resolver owner");
     }
 
-    function test_register__basic_success() public {
+    function test_register__basic_success_01() public {
+        // // Prank alice
+        vm.startPrank(alice);
+        vm.deal(alice, 1 ether);
+
+        RegistrarController.RegisterRequest memory request = RegistrarController.RegisterRequest({
+            name: "foo-bar",
+            owner: alice,
+            duration: 365 days,
+            resolver: address(resolver),
+            data: new bytes[](0),
+            reverseRecord: true
+        });
+        registrar.register{value: 1 ether}(request);
+        // // Register a name
+        // registrar.register(alice, "alice.beranames", 1, Payment.ETH);
+
+        // Stop pranking
+        vm.stopPrank();
+    }
+
+    function test_register__basic_success_02() public {
         // // Prank alice
         // vm.startPrank(alice);
 
