@@ -102,6 +102,7 @@ contract RegistrarController is Ownable {
     /// @param resolver The address of the resolver to set for this name.
     /// @param data Multicallable data bytes for setting records in the associated resolver upon reigstration.
     /// @param reverseRecord Bool to decide whether to set this name as the "primary" name for the `owner`.
+    /// @param referrer The address of the referrer - a zero address indicates no referrer.
     struct RegisterRequest {
         string name;
         address owner;
@@ -109,6 +110,8 @@ contract RegistrarController is Ownable {
         address resolver;
         bytes[] data;
         bool reverseRecord;
+
+        address referrer;
     }
 
     /// Storage ----------------------------------------------------------

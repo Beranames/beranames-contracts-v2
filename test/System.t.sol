@@ -112,7 +112,7 @@ contract SystemTest is BaseTest {
             whitelistValidator,
             address(registrarAdmin),
             BERA_NODE,
-            "bera",
+            ".bera",
             address(registrarAdmin)
         );
         baseRegistrar.addController(address(registrar));
@@ -148,17 +148,22 @@ contract SystemTest is BaseTest {
         vm.startPrank(alice);
         vm.deal(alice, 1 ether);
 
+        // Register a name
         RegistrarController.RegisterRequest memory request = RegistrarController.RegisterRequest({
             name: "foo-bar",
             owner: alice,
             duration: 365 days,
             resolver: address(resolver),
             data: new bytes[](0),
-            reverseRecord: true
+            reverseRecord: true,
+            referrer: address(0)
         });
         registrar.register{value: 1 ether}(request);
-        // // Register a name
-        // registrar.register(alice, "alice.beranames", 1, Payment.ETH);
+
+        // Check the reverse record
+        bytes32 reverseNode = reverseRegistrar.node(alice);
+        string memory name = resolver.name(reverseNode);
+        assertEq(name, "foo-bar.bera", "name");
 
         // Stop pranking
         vm.stopPrank();
@@ -182,4 +187,8 @@ contract SystemTest is BaseTest {
     // function testFuzz_XXX(uint256 x) public {
     //     assertEq(x, x);
     // }
+
+    function _calculateNode(bytes32 labelHash_, bytes32 parent_) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(parent_, labelHash_));
+    }
 }
