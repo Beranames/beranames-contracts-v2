@@ -38,11 +38,6 @@ contract WhitelistValidator is Ownable, IWhitelistValidator {
         bytes memory message,
         uint8 v, bytes32 r, bytes32 s
     ) public view {
-        // Decode and validate the payload
-        (address sender_, ) = abi.decode(message, (address, uint256));
-        if (sender_ != msg.sender)
-            revert InvalidPayload();
-
         // Recover the signer from the signature
         address signer_ = ecrecover(
             keccak256(

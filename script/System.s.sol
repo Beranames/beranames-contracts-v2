@@ -11,6 +11,7 @@ import {BeraDefaultResolver} from "src/resolver/Resolver.sol";
 import {RegistrarController} from "src/registrar/Registrar.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
+import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 
 import {
     BERA_NODE,
@@ -30,6 +31,10 @@ contract ContractScript is Script {
 
     // Layer 3: Public Registrar
     RegistrarController public registrar;
+
+    ReservedRegistry public reservedRegistry;
+    WhitelistValidator public whitelistValidator;
+    PriceOracle public priceOracle;
 
     // Addresses
     // TODO: Update these with the correct addresses
@@ -96,13 +101,16 @@ contract ContractScript is Script {
 
         // Deploy layer 3 components: public registrar
         // Create the PriceOracle
-        PriceOracle priceOracle = new PriceOracle();
+        priceOracle = new PriceOracle();
         
         // Create the WhitelistValidator
-        WhitelistValidator whitelistValidator = new WhitelistValidator(
+        whitelistValidator = new WhitelistValidator(
             address(registrarAdmin),
             address(signer)
         );
+
+        // Create the reserved registry
+        reservedRegistry = new ReservedRegistry(address(registrarAdmin));
 
         // Create the registrar, set the resolver, and set as a controller
         registrar = new RegistrarController(
@@ -110,6 +118,7 @@ contract ContractScript is Script {
             priceOracle,
             reverseRegistrar,
             whitelistValidator,
+            reservedRegistry,
             address(registrarAdmin),
             BERA_NODE,
             "beranames",

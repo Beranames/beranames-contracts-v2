@@ -9,6 +9,7 @@ import {BaseRegistrar} from "src/registrar/types/BaseRegistrar.sol";
 import {ReverseRegistrar} from "src/registrar/ReverseRegistrar.sol";
 import {BeraDefaultResolver} from "src/resolver/Resolver.sol";
 import {RegistrarController} from "src/registrar/Registrar.sol";
+import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 
@@ -104,12 +105,16 @@ contract SystemTest is BaseTest {
             address(signer)
         );
 
+        // Create the reserved registry
+        ReservedRegistry reservedRegistry = new ReservedRegistry(address(deployer));
+
         // Create the registrar, set the resolver, and set as a controller
         registrar = new RegistrarController(
             baseRegistrar,
             priceOracle,
             reverseRegistrar,
             whitelistValidator,
+            reservedRegistry,
             address(registrarAdmin),
             BERA_NODE,
             ".bera",

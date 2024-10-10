@@ -12,6 +12,7 @@ import {BeraDefaultResolver} from "src/resolver/Resolver.sol";
 import {IWhitelistValidator} from "src/registrar/interfaces/IWhitelistValidator.sol";
 import {IPriceOracle} from "src/registrar/interfaces/IPriceOracle.sol";
 import {IReverseRegistrar} from "src/registrar/interfaces/IReverseRegistrar.sol";
+import {IReservedRegistry} from "src/registrar/interfaces/IReservedRegistry.sol";
 
 import {BERA_NODE, GRACE_PERIOD} from "src/utils/Constants.sol";
 import {StringUtils} from "src/utils/StringUtils.sol";
@@ -49,6 +50,12 @@ contract RegistrarController is Ownable {
 
     /// @notice Thrown when a refund transfer is unsuccessful.
     error TransferFailed();
+
+    /// @notice Thrown when a name is reserved.
+    error NameReserved();
+    
+    /// @notice Thrown when a reverse record is being set for another address.
+    error CantSetReverseRecordForOthers();
 
     /// Events -----------------------------------------------------------
 
@@ -128,6 +135,9 @@ contract RegistrarController is Ownable {
     /// @notice The address of the whitelist validator contract.
     IWhitelistValidator public whitelistValidator;
 
+    /// @notice The implementation of the Reserved Registry contract.
+    IReservedRegistry public reservedRegistry;
+
     /// @notice The node for which this name enables registration. It must match the `rootNode` of `base`.
     bytes32 public immutable rootNode;
 
@@ -189,6 +199,8 @@ contract RegistrarController is Ownable {
     /// @param base_ The base registrar contract.
     /// @param prices_ The pricing oracle contract.
     /// @param reverseRegistrar_ The reverse registrar contract.
+    /// @param whitelistValidator_ The whitelist validator contract.
+    /// @param reservedRegistry_ The reserved registry contract.
     /// @param owner_ The permissioned address initialized as the `owner` in the `Ownable` context.
     /// @param rootNode_ The node for which this registrar manages registrations.
     /// @param rootName_ The name of the root node which this registrar manages.
@@ -198,6 +210,7 @@ contract RegistrarController is Ownable {
         IPriceOracle prices_,
         IReverseRegistrar reverseRegistrar_,
         IWhitelistValidator whitelistValidator_,
+        IReservedRegistry reservedRegistry_,
         address owner_,
         bytes32 rootNode_,
         string memory rootName_,
@@ -210,6 +223,7 @@ contract RegistrarController is Ownable {
         rootName = rootName_;
         paymentReceiver = paymentReceiver_;
         whitelistValidator = whitelistValidator_;
+        reservedRegistry = reservedRegistry_;
         reverseRegistrar.claim(owner_);
     }
 
@@ -311,6 +325,7 @@ contract RegistrarController is Ownable {
     function register(
         RegisterRequest calldata request
     ) public payable publicSaleLive {
+        _validateRegistration(request);
         _register(request);
     }
 
@@ -326,6 +341,7 @@ contract RegistrarController is Ownable {
         bytes calldata signature
     ) public payable {
         _validateWhitelist(request, signature);
+        _validateRegistration(request);
         _register(request);
     }
 
@@ -380,6 +396,11 @@ contract RegistrarController is Ownable {
         emit ETHPaymentProcessed(msg.sender, price);
     }
 
+    function _validateRegistration(RegisterRequest calldata request) internal {
+        if (reservedRegistry.isReservedName(request.name)) revert NameReserved();
+        if (request.owner != msg.sender && request.reverseRecord) revert CantSetReverseRecordForOthers();
+    }
+
     function _validateWhitelist(
         RegisterRequest calldata request,
         bytes calldata signature
@@ -394,8 +415,8 @@ contract RegistrarController is Ownable {
             v := calldataload(add(signature.offset, 64))
         }
 
-        // Encode payload
-        bytes memory payload = abi.encode(request.owner, request.duration);
+        // Encode payload - signature format: (address owner, address referrer, uint256 duration, string name)
+        bytes memory payload = abi.encode(request.owner, request.referrer, request.duration, request.name);
 
         if (usedSignatures[keccak256(payload)]) revert SignatureAlreadyUsed();
 
