@@ -53,7 +53,7 @@ contract RegistrarController is Ownable {
 
     /// @notice Thrown when a name is reserved.
     error NameReserved();
-    
+
     /// @notice Thrown when a reverse record is being set for another address.
     error CantSetReverseRecordForOthers();
 
@@ -71,12 +71,7 @@ contract RegistrarController is Ownable {
     /// @param label The hashed label of the name.
     /// @param owner The owner of the name that was registered.
     /// @param expires The date that the registration expires.
-    event NameRegistered(
-        string name,
-        bytes32 indexed label,
-        address indexed owner,
-        uint256 expires
-    );
+    event NameRegistered(string name, bytes32 indexed label, address indexed owner, uint256 expires);
 
     /// @notice Emitted when a name is renewed.
     ///
@@ -117,7 +112,6 @@ contract RegistrarController is Ownable {
         address resolver;
         bytes[] data;
         bool reverseRecord;
-
         address referrer;
     }
 
@@ -244,9 +238,7 @@ contract RegistrarController is Ownable {
     /// @dev Emits `ReverseRegistrarUpdated` after setting the `reverseRegistrar` contract.
     ///
     /// @param reverse_ The new reverse registrar contract.
-    function setReverseRegistrar(
-        IReverseRegistrar reverse_
-    ) external onlyOwner {
+    function setReverseRegistrar(IReverseRegistrar reverse_) external onlyOwner {
         reverseRegistrar = reverse_;
         emit ReverseRegistrarUpdated(address(reverse_));
     }
@@ -294,10 +286,7 @@ contract RegistrarController is Ownable {
     /// @param duration The time that the name would be rented.
     ///
     /// @return price The `Price` tuple containing the base and premium prices respectively, denominated in wei.
-    function rentPrice(
-        string memory name,
-        uint256 duration
-    ) public view returns (IPriceOracle.Price memory price) {
+    function rentPrice(string memory name, uint256 duration) public view returns (IPriceOracle.Price memory price) {
         bytes32 label = keccak256(bytes(name));
         price = prices.price(name, _getExpiry(uint256(label)), duration);
     }
@@ -308,10 +297,7 @@ contract RegistrarController is Ownable {
     /// @param duration The time that the name would be registered.
     ///
     /// @return The all-in price for the name registration, denominated in wei.
-    function registerPrice(
-        string memory name,
-        uint256 duration
-    ) public view returns (uint256) {
+    function registerPrice(string memory name, uint256 duration) public view returns (uint256) {
         IPriceOracle.Price memory price = rentPrice(name, duration);
         return price.base - price.discount;
     }
@@ -322,9 +308,7 @@ contract RegistrarController is Ownable {
     ///     This `payable` method must receive appropriate `msg.value` to pass `_validatePayment()`.
     ///
     /// @param request The `RegisterRequest` struct containing the details for the registration.
-    function register(
-        RegisterRequest calldata request
-    ) public payable publicSaleLive {
+    function register(RegisterRequest calldata request) public payable publicSaleLive {
         _validateRegistration(request);
         _register(request);
     }
@@ -336,10 +320,7 @@ contract RegistrarController is Ownable {
     ///
     /// @param request The `RegisterRequest` struct containing the details for the registration.
     /// @param signature The signature of the whitelisted address.
-    function whitelistRegister(
-        RegisterRequest calldata request,
-        bytes calldata signature
-    ) public payable {
+    function whitelistRegister(RegisterRequest calldata request, bytes calldata signature) public payable {
         _validateWhitelist(request, signature);
         _validateRegistration(request);
         _register(request);
@@ -351,9 +332,7 @@ contract RegistrarController is Ownable {
     ///     This `payable` method must receive appropriate `msg.value` to pass `_validatePayment()`.
     ///
     /// @param request The `RegisterRequest` struct containing the details for the registration.
-    function _register(
-        RegisterRequest calldata request
-    ) internal validRegistration(request) {
+    function _register(RegisterRequest calldata request) internal validRegistration(request) {
         uint256 price = registerPrice(request.name, request.duration);
 
         _validatePayment(price);
@@ -396,23 +375,21 @@ contract RegistrarController is Ownable {
         emit ETHPaymentProcessed(msg.sender, price);
     }
 
-    function _validateRegistration(RegisterRequest calldata request) internal {
+    function _validateRegistration(RegisterRequest calldata request) internal view {
         if (reservedRegistry.isReservedName(request.name)) revert NameReserved();
         if (request.owner != msg.sender && request.reverseRecord) revert CantSetReverseRecordForOthers();
     }
 
-    function _validateWhitelist(
-        RegisterRequest calldata request,
-        bytes calldata signature
-    ) internal {
+    function _validateWhitelist(RegisterRequest calldata request, bytes calldata signature) internal {
         // Break signature into r, s, v
         bytes32 r;
         bytes32 s;
         uint8 v;
+        // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/ECDSA.sol#L66-L70
         assembly {
             r := calldataload(signature.offset)
             s := calldataload(add(signature.offset, 32))
-            v := calldataload(add(signature.offset, 64))
+            v := byte(0, calldataload(add(signature.offset, 64)))
         }
 
         // Encode payload - signature format: (address owner, address referrer, uint256 duration, string name)
@@ -435,9 +412,7 @@ contract RegistrarController is Ownable {
     /// @param tokenId The ID of the token to check for expiry.
     ///
     /// @return expires Returns the expiry + GRACE_PERIOD for previously registered names, else `launchTime`.
-    function _getExpiry(
-        uint256 tokenId
-    ) internal view returns (uint256 expires) {
+    function _getExpiry(uint256 tokenId) internal view returns (uint256 expires) {
         expires = base.nameExpires(bytes32(tokenId));
         if (expires == 0) {
             return launchTime;
@@ -454,40 +429,25 @@ contract RegistrarController is Ownable {
     /// @param request The `RegisterRequest` struct containing the details for the registration.
     function _registerRequest(RegisterRequest calldata request) internal {
         uint256 expires = base.registerWithRecord(
-            uint256(keccak256(bytes(request.name))),
-            request.owner,
-            request.duration,
-            request.resolver,
-            0
+            uint256(keccak256(bytes(request.name))), request.owner, request.duration, request.resolver, 0
         );
 
         if (request.data.length > 0) {
-            _setRecords(
-                request.resolver,
-                keccak256(bytes(request.name)),
-                request.data
-            );
+            _setRecords(request.resolver, keccak256(bytes(request.name)), request.data);
         }
 
         if (request.reverseRecord) {
             _setReverseRecord(request.name, request.resolver, msg.sender);
         }
 
-        emit NameRegistered(
-            request.name,
-            keccak256(bytes(request.name)),
-            request.owner,
-            expires
-        );
+        emit NameRegistered(request.name, keccak256(bytes(request.name)), request.owner, expires);
     }
 
     /// @notice Refunds any remaining `msg.value` after processing a registration or renewal given`price`.
     /// @param price The total value to be retained, denominated in wei.
     function _refundExcessEth(uint256 price) internal {
         if (msg.value > price) {
-            (bool sent, ) = payable(msg.sender).call{
-                value: (msg.value - price)
-            }("");
+            (bool sent,) = payable(msg.sender).call{value: (msg.value - price)}("");
             if (!sent) revert TransferFailed();
         }
     }
@@ -497,11 +457,7 @@ contract RegistrarController is Ownable {
     /// @param resolverAddress The address of the resolver to set records on.
     /// @param label The keccak256 namehash for the specified name.
     /// @param data  The abi encoded calldata records that will be used in the multicallable resolver.
-    function _setRecords(
-        address resolverAddress,
-        bytes32 label,
-        bytes[] calldata data
-    ) internal {
+    function _setRecords(address resolverAddress, bytes32 label, bytes[] calldata data) internal {
         bytes32 nodehash = keccak256(abi.encodePacked(rootNode, label));
         BeraDefaultResolver resolver = BeraDefaultResolver(resolverAddress);
         resolver.multicallWithNodeCheck(nodehash, data);
@@ -511,33 +467,18 @@ contract RegistrarController is Ownable {
     /// @param name The specified name.
     /// @param resolver The resolver to set the reverse record on.
     /// @param owner  The owner of the reverse record.
-    function _setReverseRecord(
-        string memory name,
-        address resolver,
-        address owner
-    ) internal {
-        reverseRegistrar.setNameForAddr(
-            msg.sender,
-            owner,
-            resolver,
-            string.concat(name, rootName)
-        );
+    function _setReverseRecord(string memory name, address resolver, address owner) internal {
+        reverseRegistrar.setNameForAddr(msg.sender, owner, resolver, string.concat(name, rootName));
     }
 
     /// @notice Allows anyone to withdraw the eth accumulated on this contract back to the `paymentReceiver`.
     function withdrawETH() public {
-        (bool sent, ) = payable(paymentReceiver).call{
-            value: (address(this).balance)
-        }("");
+        (bool sent,) = payable(paymentReceiver).call{value: (address(this).balance)}("");
         if (!sent) revert TransferFailed();
     }
 
     /// @notice Allows the owner to recover ERC20 tokens sent to the contract by mistake.
-    function recoverFunds(
-        address _token,
-        address _to,
-        uint256 _amount
-    ) external onlyOwner {
+    function recoverFunds(address _token, address _to, uint256 _amount) external onlyOwner {
         IERC20(_token).safeTransfer(_to, _amount);
     }
 }
