@@ -17,6 +17,8 @@ import {IReservedRegistry} from "src/registrar/interfaces/IReservedRegistry.sol"
 import {BERA_NODE, GRACE_PERIOD} from "src/utils/Constants.sol";
 import {StringUtils} from "src/utils/StringUtils.sol";
 
+import {console} from "forge-std/console.sol";
+
 /// @title Registrar Controller
 contract RegistrarController is Ownable {
     using StringUtils for string;
@@ -381,6 +383,10 @@ contract RegistrarController is Ownable {
     }
 
     function _validateWhitelist(RegisterRequest calldata request, bytes calldata signature) internal {
+        console.log("signature from Registrar.sol");
+        console.logBytes(signature);
+        require(signature.length == 65, "Invalid signature length");
+
         // Break signature into r, s, v
         bytes32 r;
         bytes32 s;
@@ -389,11 +395,13 @@ contract RegistrarController is Ownable {
         assembly {
             r := calldataload(signature.offset)
             s := calldataload(add(signature.offset, 32))
-            v := byte(0, calldataload(add(signature.offset, 64)))
+            v := byte(0, calldataload(add(signature.offset, 64))) // Correctly extract the first byte
         }
 
         // Encode payload - signature format: (address owner, address referrer, uint256 duration, string name)
         bytes memory payload = abi.encode(request.owner, request.referrer, request.duration, request.name);
+        console.log("payload from Registrar.sol");
+        console.logBytes(payload);
 
         if (usedSignatures[keccak256(payload)]) revert SignatureAlreadyUsed();
 

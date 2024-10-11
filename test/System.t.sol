@@ -12,6 +12,7 @@ import {RegistrarController} from "src/registrar/Registrar.sol";
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
+import {IWhitelistValidator} from "src/registrar/interfaces/IWhitelistValidator.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 
@@ -90,7 +91,7 @@ contract SystemTest is BaseTest {
             baseRegistrar,
             priceOracle,
             reverseRegistrar,
-            whitelistValidator,
+            IWhitelistValidator(address(whitelistValidator)),
             reservedRegistry,
             address(registrarAdmin),
             BERA_NODE,
