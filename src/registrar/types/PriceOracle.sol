@@ -20,11 +20,11 @@ contract PriceOracle is IPriceOracle {
 
     /// @notice Calculates the price for a given label with a specified payment method.
     /// @param label The label to query.
-    /// @param expires The expiry of the label.
+    /// hidden_param expiry The expiry of the label.
     /// @param duration The duration of the registration.
     /// @param payment The payment method.
     /// @return The price of the label.
-    function price(string calldata label, uint256 expires, uint256 duration, Payment payment)
+    function price(string calldata label, uint256, uint256 duration, Payment payment)
         public
         pure
         override
