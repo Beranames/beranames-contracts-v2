@@ -6,7 +6,7 @@ import "./Utils.sol";
 
 contract BaseTest is Test {
     Utils public utils;
-    
+
     // Deployers
     address public deployer;
 
@@ -15,6 +15,7 @@ contract BaseTest is Test {
 
     // Signer
     address public signer;
+    uint256 public signerPk;
 
     // Users & non permissioned addresses
     address public alice;
@@ -32,7 +33,7 @@ contract BaseTest is Test {
         registrarAdmin = utils.initializeAccount("Registrar Admin");
 
         // Signer
-        signer = utils.initializeAccount("Signer");
+        (signer, signerPk) = makeAddrAndKey("signer");
 
         // Users & non permissioned addresses
         alice = utils.initializeAccount("Alice");
