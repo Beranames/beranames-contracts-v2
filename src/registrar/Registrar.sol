@@ -95,6 +95,11 @@ contract RegistrarController is Ownable {
     /// @param newReverseRegistrar The address of the new reverse registrar.
     event ReverseRegistrarUpdated(address newReverseRegistrar);
 
+    /// @notice Emitted when the launch time is updated.
+    ///
+    /// @param newLaunchTime The new launch time.
+    event LaunchTimeUpdated(uint256 newLaunchTime);
+
     /// Datastructures ---------------------------------------------------
 
     /// @notice The details of a registration request.
@@ -248,6 +253,7 @@ contract RegistrarController is Ownable {
     /// @param launchTime_ The new launch time timestamp.
     function setLaunchTime(uint256 launchTime_) external onlyOwner {
         launchTime = launchTime_;
+        emit LaunchTimeUpdated(launchTime_);
     }
 
     /// @notice Allows the `owner` to set the reverse registrar contract.

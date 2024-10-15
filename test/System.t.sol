@@ -13,13 +13,9 @@ import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 
-import {
-    BERA_NODE,
-    ADDR_REVERSE_NODE,
-    REVERSE_NODE,
-    DEFAULT_TTL
-} from "src/utils/Constants.sol";
+import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 
+import "forge-std/console2.sol";
 /// Test imports
 
 import {BaseTest} from "./Base.t.sol";
@@ -35,6 +31,10 @@ contract SystemTest is BaseTest {
 
     // Layer 3: Public Registrar
     RegistrarController public registrar;
+
+    ReservedRegistry public reservedRegistry;
+    WhitelistValidator public whitelistValidator;
+    PriceOracle public priceOracle;
 
     function setUp() public override {
         // Setup base test
@@ -55,32 +55,21 @@ contract SystemTest is BaseTest {
             "https://beranames.xyz/collection.json"
         );
 
-        // Create the reverse registrar        
+        // Create the reverse registrar
         reverseRegistrar = new ReverseRegistrar(registry);
 
         // Transfer ownership of the reverse node to the registrar
         registry.setSubnodeRecord(
-            bytes32(0),
-            keccak256(abi.encodePacked("reverse")),
-            address(deployer),
-            address(0),
-            DEFAULT_TTL
+            bytes32(0), keccak256(abi.encodePacked("reverse")), address(deployer), address(0), DEFAULT_TTL
         );
         registry.setSubnodeRecord(
-            REVERSE_NODE,
-            keccak256(abi.encodePacked("addr")),
-            address(reverseRegistrar),
-            address(0),
-            DEFAULT_TTL
+            REVERSE_NODE, keccak256(abi.encodePacked("addr")), address(reverseRegistrar), address(0), DEFAULT_TTL
         );
         registry.setOwner(REVERSE_NODE, address(registrarAdmin));
 
         // Create the resolver
         resolver = new BeraDefaultResolver(
-            registry,
-            address(baseRegistrar),
-            address(reverseRegistrar),
-            address(registrarAdmin)
+            registry, address(baseRegistrar), address(reverseRegistrar), address(registrarAdmin)
         );
 
         // Set the resolver for the base node
@@ -88,25 +77,18 @@ contract SystemTest is BaseTest {
 
         // Create the bere node and set registrar/resolver
         registry.setSubnodeRecord(
-            bytes32(0),
-            keccak256(abi.encodePacked("bera")),
-            address(baseRegistrar),
-            address(resolver),
-            DEFAULT_TTL
+            bytes32(0), keccak256(abi.encodePacked("bera")), address(baseRegistrar), address(resolver), DEFAULT_TTL
         );
 
         // Deploy layer 3 components: public registrar
         // Create the PriceOracle
-        PriceOracle priceOracle = new PriceOracle();
-        
+        priceOracle = new PriceOracle();
+
         // Create the WhitelistValidator
-        WhitelistValidator whitelistValidator = new WhitelistValidator(
-            address(registrarAdmin),
-            address(signer)
-        );
+        whitelistValidator = new WhitelistValidator(address(registrarAdmin), address(signer));
 
         // Create the reserved registry
-        ReservedRegistry reservedRegistry = new ReservedRegistry(address(deployer));
+        reservedRegistry = new ReservedRegistry(address(deployer));
 
         // Create the registrar, set the resolver, and set as a controller
         registrar = new RegistrarController(
@@ -122,7 +104,7 @@ contract SystemTest is BaseTest {
         );
         baseRegistrar.addController(address(registrar));
 
-        // Transfer ownership to registrar admin 
+        // Transfer ownership to registrar admin
         // root node
         registry.setOwner(bytes32(0), address(registrarAdmin));
         baseRegistrar.transferOwnership(address(registrarAdmin));
@@ -138,7 +120,7 @@ contract SystemTest is BaseTest {
         vm.warp(100_0000_0000);
     }
 
-    function test_initialized() public {
+    function test_initialized() public view {
         assertEq(registry.owner(BERA_NODE), address(baseRegistrar), "BERA_NODE owner");
         assertEq(registry.owner(ADDR_REVERSE_NODE), address(reverseRegistrar), "ADDR_REVERSE_NODE owner");
         assertEq(registry.resolver(BERA_NODE), address(resolver), "BERA_NODE resolver");
@@ -148,13 +130,111 @@ contract SystemTest is BaseTest {
         assertEq(address(resolver.owner()), address(registrarAdmin), "resolver owner");
     }
 
-    function test_register__basic_success_01() public {
-        // // Prank alice
+    function test_basic_success_and_resolution() public {
         vm.startPrank(alice);
         vm.deal(alice, 1 ether);
 
-        // Register a name
-        RegistrarController.RegisterRequest memory request = RegistrarController.RegisterRequest({
+        registrar.register{value: 1 ether}(defaultRequest());
+
+        // Check the resolution
+        bytes32 reverseNode = reverseRegistrar.node(alice);
+        string memory name = resolver.name(reverseNode);
+        assertEq(name, "foo-bar.bera", "name");
+
+        // Check the reverse resolution
+        bytes32 namehash = 0xdbe044f099cc5aeee236290aa7508bcb847d304cd112a364d9c4b0b6e8b80dc7; // namehash('foo-bar.bera')
+        address owner = registry.owner(namehash);
+        assertEq(owner, alice, "owner");
+
+        vm.stopPrank();
+    }
+
+    function test_failure_name_not_available() public {
+        vm.startPrank(alice);
+        vm.deal(alice, 10 ether);
+
+        registrar.register{value: 1 ether}(defaultRequest());
+
+        bytes32 reverseNode = reverseRegistrar.node(alice);
+        string memory name = resolver.name(reverseNode);
+        assertEq(name, "foo-bar.bera", "name");
+
+        vm.expectRevert(abi.encodeWithSelector(RegistrarController.NameNotAvailable.selector, "foo-bar"));
+        registrar.register{value: 1 ether}(defaultRequest());
+
+        vm.stopPrank();
+    }
+
+    function test_failure_not_live() public {
+        setLaunchTimeInFuture();
+
+        vm.startPrank(alice);
+        vm.deal(alice, 10 ether);
+
+        vm.expectRevert(abi.encodeWithSelector(RegistrarController.PublicSaleNotLive.selector));
+        registrar.register{value: 1 ether}(defaultRequest());
+        vm.stopPrank();
+    }
+
+    function test_whitelisted_basic_success_and_resolution() public {
+        setLaunchTimeInFuture();
+
+        vm.startPrank(alice);
+        vm.deal(alice, 1 ether);
+
+        bytes memory signature = sign();
+        registrar.whitelistRegister{value: 1 ether}(defaultRequest(), signature);
+
+        // Check the resolution
+        bytes32 reverseNode = reverseRegistrar.node(alice);
+        string memory name = resolver.name(reverseNode);
+        assertEq(name, "foo-bar.bera", "name");
+
+        // Check the reverse resolution
+        bytes32 namehash = 0xdbe044f099cc5aeee236290aa7508bcb847d304cd112a364d9c4b0b6e8b80dc7; // namehash('foo-bar.bera')
+        address owner = registry.owner(namehash);
+        assertEq(owner, alice, "owner");
+
+        vm.stopPrank();
+    }
+
+    // getEnsAddress => resolve(bytes, bytes) => https://viem.sh/docs/ens/actions/getEnsAddress
+    // function test_viem_getEnsAddress() public {
+    //     address owner = universalResolver.resolve(name, data);
+    //     assertEq(owner, alice, "owner");
+    // }
+
+    // getEnsName => reverse(bytes) => https://viem.sh/docs/ens/actions/getEnsName
+    // function test_viem_getEnsName() public {
+    //     bytes32 reverseNode = reverseRegistrar.node(alice);
+    //     string memory name = universalResolver.reverse(reverseNode);
+    //     assertEq(name, "foo-bar.bera", "name");
+    // }
+
+    // getEnsResolver => findResolver(bytes) => https://viem.sh/docs/ens/actions/getEnsResolver
+    // function test_viem_getEnsResolver() public {
+    //     address resolver = universalResolver.findResolver(name);
+    //     assertEq(resolver, address(resolver), "resolver");
+    // }
+
+    // getEnsText => getEnsText(bytes, bytes) => https://viem.sh/docs/ens/actions/getEnsText
+    // function test_viem_getEnsText() public {
+    //     bytes memory data = universalResolver.getEnsText(name, key);
+    //     assertEq(data, "foo-bar.bera", "data");
+    // }
+
+    // getEnsAvatar => getEnsText(bytes, bytes) with key avatar => https://viem.sh/docs/ens/actions/getEnsAvatar
+    // function test_viem_getEnsAvatar() public {
+    //     bytes memory data = universalResolver.getEnsText(name, key);
+    //     assertEq(data, "foo-bar.bera", "data");
+    // }
+
+    function _calculateNode(bytes32 labelHash_, bytes32 parent_) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(parent_, labelHash_));
+    }
+
+    function defaultRequest() internal view returns (RegistrarController.RegisterRequest memory) {
+        return RegistrarController.RegisterRequest({
             name: "foo-bar",
             owner: alice,
             duration: 365 days,
@@ -163,37 +243,21 @@ contract SystemTest is BaseTest {
             reverseRecord: true,
             referrer: address(0)
         });
-        registrar.register{value: 1 ether}(request);
+    }
 
-        // Check the reverse record
-        bytes32 reverseNode = reverseRegistrar.node(alice);
-        string memory name = resolver.name(reverseNode);
-        assertEq(name, "foo-bar.bera", "name");
-
-        // Stop pranking
+    function setLaunchTimeInFuture() internal {
+        vm.startPrank(registrarAdmin);
+        registrar.setLaunchTime(block.timestamp + 10 days);
         vm.stopPrank();
     }
 
-    function test_register__basic_success_02() public {
-        // // Prank alice
-        // vm.startPrank(alice);
+    function sign() internal view returns (bytes memory) {
+        bytes memory payload = abi.encode(alice, address(0), 365 days, "foo-bar");
+        bytes32 hash =
+            keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", abi.encodePacked(keccak256(payload))));
 
-        // // Register a name
-        // registrar.register(alice, "alice.beranames", 1, Payment.ETH);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, hash);
 
-        // // Stop pranking
-        // vm.stopPrank();
-    }
-
-    // function test_XXX() public {
-    //     assertEq(1, 1);
-    // }
-
-    // function testFuzz_XXX(uint256 x) public {
-    //     assertEq(x, x);
-    // }
-
-    function _calculateNode(bytes32 labelHash_, bytes32 parent_) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(parent_, labelHash_));
+        return abi.encodePacked(r, s, v);
     }
 }
