@@ -16,6 +16,7 @@ import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 
+import "forge-std/console2.sol";
 /// Test imports
 
 import {BaseTest} from "./Base.t.sol";
