@@ -15,7 +15,6 @@ import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 
-import "forge-std/console2.sol";
 /// Test imports
 
 import {BaseTest} from "./Base.t.sol";
@@ -162,6 +161,9 @@ contract SystemTest is BaseTest {
         vm.expectRevert(abi.encodeWithSelector(RegistrarController.NameNotAvailable.selector, "foo-bar"));
         registrar.register{value: 1 ether}(defaultRequest());
 
+        bool available = registrar.available("foo-bar");
+        assertFalse(available);
+
         vm.stopPrank();
     }
 
@@ -194,6 +196,20 @@ contract SystemTest is BaseTest {
         bytes32 namehash = 0xdbe044f099cc5aeee236290aa7508bcb847d304cd112a364d9c4b0b6e8b80dc7; // namehash('foo-bar.bera')
         address owner = registry.owner(namehash);
         assertEq(owner, alice, "owner");
+
+        vm.stopPrank();
+    }
+
+    function test_reserved_failure() public {
+        vm.startPrank(deployer);
+        reservedRegistry.setReservedName("foo-bar");
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        vm.deal(alice, 1 ether);
+
+        vm.expectRevert(RegistrarController.NameReserved.selector);
+        registrar.register{value: 1 ether}(defaultRequest());
 
         vm.stopPrank();
     }
