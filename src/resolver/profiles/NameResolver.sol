@@ -23,18 +23,22 @@ abstract contract NameResolver is INameResolver, ResolverBase {
     }
 
     /**
-     * Returns the name associated with an BNS node, for reverse records.
+     * Returns the name associated with an BNS node, for reverse records, replacing .bera with 🐻⛓️
      * Defined in EIP181.
      * @param node The BNS node to query.
      * @return The associated name.
      */
     function name(bytes32 node) external view virtual override returns (string memory) {
-        return versionable_names[recordVersions[node]][node];
+        return this.nameWithoutEmojis(node).replace(".bera", unicode".🐻⛓️");
     }
 
-    function nameWithEmojis(bytes32 node) external view virtual returns (string memory) {
-        string memory nameWithoutEmojis = this.name(node);
-        return nameWithoutEmojis.replace(".bera", unicode".🐻⛓️");
+    /**
+     * Returns the name associated with an BNS node, for reverse records, with original .bera suffix
+     * @param node The BNS node to query.
+     * @return The associated name.
+     */
+    function nameWithoutEmojis(bytes32 node) external view virtual returns (string memory) {
+        return versionable_names[recordVersions[node]][node];
     }
 
     function supportsInterface(bytes4 interfaceID) public view virtual override returns (bool) {

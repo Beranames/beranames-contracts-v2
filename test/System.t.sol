@@ -146,7 +146,7 @@ contract SystemTest is BaseTest {
         // Check the resolution
         bytes32 reverseNode = reverseRegistrar.node(alice);
         string memory name = resolver.name(reverseNode);
-        assertEq(name, "foo-bar.bera", "name");
+        assertEq(name, unicode"foo-bar.🐻⛓️", "name");
 
         // Check the reverse resolution
         bytes32 namehash = 0xdbe044f099cc5aeee236290aa7508bcb847d304cd112a364d9c4b0b6e8b80dc7; // namehash('foo-bar.bera')
@@ -164,7 +164,7 @@ contract SystemTest is BaseTest {
 
         bytes32 reverseNode = reverseRegistrar.node(alice);
         string memory name = resolver.name(reverseNode);
-        assertEq(name, "foo-bar.bera", "name");
+        assertEq(name, unicode"foo-bar.🐻⛓️", "name");
 
         vm.expectRevert(abi.encodeWithSelector(RegistrarController.NameNotAvailable.selector, "foo-bar"));
         registrar.register{value: 1 ether}(defaultRequest());
@@ -198,7 +198,7 @@ contract SystemTest is BaseTest {
         // Check the resolution
         bytes32 reverseNode = reverseRegistrar.node(alice);
         string memory name = resolver.name(reverseNode);
-        assertEq(name, "foo-bar.bera", "name");
+        assertEq(name, unicode"foo-bar.🐻⛓️", "name");
 
         // Check the reverse resolution
         bytes32 namehash = 0xdbe044f099cc5aeee236290aa7508bcb847d304cd112a364d9c4b0b6e8b80dc7; // namehash('foo-bar.bera')
@@ -232,7 +232,7 @@ contract SystemTest is BaseTest {
     // function test_viem_getEnsName() public {
     //     bytes32 reverseNode = reverseRegistrar.node(alice);
     //     string memory name = universalResolver.reverse(reverseNode);
-    //     assertEq(name, "foo-bar.bera", "name");
+    //     assertEq(name, unicode"foo-bar.🐻⛓️", "name");
     // }
 
     // getEnsResolver => findResolver(bytes) => https://viem.sh/docs/ens/actions/getEnsResolver
@@ -244,13 +244,13 @@ contract SystemTest is BaseTest {
     // getEnsText => getEnsText(bytes, bytes) => https://viem.sh/docs/ens/actions/getEnsText
     // function test_viem_getEnsText() public {
     //     bytes memory data = universalResolver.getEnsText(name, key);
-    //     assertEq(data, "foo-bar.bera", "data");
+    //     assertEq(data, unicode"foo-bar.🐻⛓️", "data");
     // }
 
     // getEnsAvatar => getEnsText(bytes, bytes) with key avatar => https://viem.sh/docs/ens/actions/getEnsAvatar
     // function test_viem_getEnsAvatar() public {
     //     bytes memory data = universalResolver.getEnsText(name, key);
-    //     assertEq(data, "foo-bar.bera", "data");
+    //     assertEq(data, unicode"foo-bar.🐻⛓️", "data");
     // }
 
     function _calculateNode(bytes32 labelHash_, bytes32 parent_) internal pure returns (bytes32) {
