@@ -36,14 +36,17 @@ contract TestNameResolverTest is Test {
         resolver.setName(node, "example.bera");
 
         string memory retrievedName = resolver.name(node);
-        assertEq(retrievedName, "example.bera");
+        assertEq(retrievedName, unicode"example.🐻⛓️");
     }
 
-    function testGetNameWithEmojis() public {
+    function testGetName() public {
         bytes32 node = keccak256("example");
         resolver.setName(node, "example.bera");
 
-        string memory retrievedName = resolver.nameWithEmojis(node);
+        string memory retrievedName = resolver.name(node);
         assertEq(retrievedName, unicode"example.🐻⛓️");
+
+        string memory retrievedNameWithoutEmojis = resolver.nameWithoutEmojis(node);
+        assertEq(retrievedNameWithoutEmojis, "example.bera");
     }
 }
