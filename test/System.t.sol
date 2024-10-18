@@ -12,6 +12,7 @@ import {RegistrarController} from "src/registrar/Registrar.sol";
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
+import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 
@@ -34,6 +35,8 @@ contract SystemTest is BaseTest {
     ReservedRegistry public reservedRegistry;
     WhitelistValidator public whitelistValidator;
     PriceOracle public priceOracle;
+
+    UniversalResolver public universalResolver;
 
     function setUp() public override {
         // Setup base test
@@ -102,6 +105,10 @@ contract SystemTest is BaseTest {
             address(registrarAdmin)
         );
         baseRegistrar.addController(address(registrar));
+
+        // Deploy the Universal Resovler
+        string[] memory urls = new string[](0);
+        universalResolver = new UniversalResolver(address(registry), urls);
 
         // Transfer ownership to registrar admin
         // root node

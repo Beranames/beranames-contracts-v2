@@ -12,6 +12,7 @@ import {RegistrarController} from "src/registrar/Registrar.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
+import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 
@@ -30,6 +31,8 @@ contract ContractScript is Script {
     ReservedRegistry public reservedRegistry;
     WhitelistValidator public whitelistValidator;
     PriceOracle public priceOracle;
+
+    UniversalResolver public universalResolver;
 
     // Addresses
     // TODO: Update these with the correct addresses
@@ -103,12 +106,17 @@ contract ContractScript is Script {
         );
         baseRegistrar.addController(address(registrar));
 
+        // Deploy the Universal Resovler
+        string[] memory urls = new string[](0);
+        universalResolver = new UniversalResolver(address(registry), urls);
+
         // TODO: Add test domains / initial mints here
 
         // Transfer ownership to registrar admin
         // root node
         registry.setOwner(bytes32(0), address(registrarAdmin));
         baseRegistrar.transferOwnership(address(registrarAdmin));
+        universalResolver.transferOwnership(address(registrarAdmin));
 
         // admin control
         reverseRegistrar.setController(address(registrarAdmin), true);
