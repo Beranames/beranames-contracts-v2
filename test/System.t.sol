@@ -16,6 +16,8 @@ import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 
+import {IAddrResolver} from "src/resolver/interfaces/IAddrResolver.sol";
+
 /// Test imports
 
 import {BaseTest} from "./Base.t.sol";
@@ -220,6 +222,37 @@ contract SystemTest is BaseTest {
 
         vm.stopPrank();
     }
+
+    function test_create_and_resolve() public prank(alice) {
+        vm.deal(alice, 1 ether);
+
+        string memory label_ = "testor";
+
+        // Set up a basic request & register the name
+        RegistrarController.RegisterRequest memory req = defaultRequest();
+        req.name = label_;
+        registrar.register{value: 1 ether}(req);
+
+        // Calculate the node for the minted name
+        bytes32 node_ = _calculateNode(keccak256(bytes(label_)), BERA_NODE);
+
+        // Configure base resolver records for the new name
+        resolver.setAddr(node_, alice);
+        resolver.setText(node_, "bera", "chain");
+
+        // Hit the universal resolver to verify resolution of the records above
+        bytes memory dnsEncName_ = bytes("\x06testor\x04bera\x00");
+        universalResolver.resolve(
+            dnsEncName_, 
+            abi.encodeWithSelector(
+                IAddrResolver.addr.selector, 
+                node_
+            )  
+        );
+        
+        vm.stopPrank();
+    }
+
 
     // getEnsAddress => resolve(bytes, bytes) => https://viem.sh/docs/ens/actions/getEnsAddress
     // function test_viem_getEnsAddress() public {
