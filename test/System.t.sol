@@ -253,6 +253,62 @@ contract SystemTest is BaseTest {
         vm.stopPrank();
     }
 
+    function test_create_and_resolve__02() public prank(alice) {        
+        vm.deal(alice, 1 ether);
+        string memory label_ = "foo";
+
+        // Set up a basic request & register the name
+        RegistrarController.RegisterRequest memory req = defaultRequest();
+        req.name = label_;
+        registrar.register{value: 1 ether}(req);
+
+        // Calculate the node for the minted name
+        bytes32 node_ = _calculateNode(keccak256(bytes(label_)), BERA_NODE);
+        assertEq(node_, 0x2462a02c69cc8f152ee2a38a1282ee7d0331f67fe8d218f63034af91a81af59a);
+
+        // // Verify the reverse resolution was set correctly
+        // assertEq(reverseRegistrar.node(alice), node_);
+
+        // Configure base resolver records for the new name
+        resolver.setText(node_, "bera", "chain");
+
+        // Hit the universal resolver to verify resolution of the records above
+        bytes memory dnsEncName_ = bytes("\x03foo\x04bera\x00");
+        (
+            bytes memory resp_,
+            address calledResolver_
+        ) = universalResolver.resolve(
+            dnsEncName_, 
+            abi.encodeWithSelector(
+                IAddrResolver.addr.selector, 
+                node_
+            )  
+        );
+        // assertEq(address(bytes32(resp_)), address(0));
+        assertEq(calledResolver_, address(resolver));
+
+        // Set the address & resolve again
+        resolver.setAddr(node_, alice);
+        (resp_, ) = universalResolver.resolve(
+            dnsEncName_, 
+            abi.encodeWithSelector(
+                IAddrResolver.addr.selector, 
+                node_
+            )  
+        );
+        // assertEq(address(resp_), alice);
+
+        // TODO: Mock out flow
+        // // dns_encode(f39fd6e51aad88f6f4ce6ab8827279cfffb92266.addr.reverse)
+        // bytes memory dnsEncodedReverseName = "\x1450BDD53e5888531868d86A4745b0588cc56837A0\x04addr\x07reverse\x00"; 
+        // (string memory returnedName,,,) = universalResolver.reverse(dnsEncodedReverseName);
+        // require(
+        //     keccak256(abi.encodePacked(returnedName)) == keccak256(abi.encodePacked("foo.bera")), "name does not match"
+        // );
+        
+        vm.stopPrank();
+    }
+
 
     // getEnsAddress => resolve(bytes, bytes) => https://viem.sh/docs/ens/actions/getEnsAddress
     // function test_viem_getEnsAddress() public {
