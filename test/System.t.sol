@@ -308,6 +308,86 @@ contract SystemTest is BaseTest {
         
         vm.stopPrank();
     }
+    
+//     function test_registrationWithZeroLengthNameFails() public {
+//         setLaunchTimeInPast();
+
+//         vm.startPrank(alice);
+//         vm.deal(alice, 1 ether);
+
+//         RegistrarController.RegisterRequest memory req = defaultRequest();
+//         req.name = "";
+
+//         vm.expectRevert(RegistrarController.InvalidName.selector);
+//         registrar.register{value: 1 ether}(req);
+//         vm.stopPrank();
+//     }
+
+//     function test_registrationWithMaximumLengthName() public {
+//         setLaunchTimeInPast();
+
+//         vm.startPrank(alice);
+//         vm.deal(alice, 1 ether);
+
+//         string memory maxLengthName = new string(63);
+//         for (uint i = 0; i < 63; i++) {
+//             bytes(maxLengthName)[i] = bytes1(uint8(97 + (i % 26))); // a-z
+//         }
+
+//         RegistrarController.RegisterRequest memory req = defaultRequest();
+//         req.name = maxLengthName;
+
+//         registrar.register{value: 1 ether}(req);
+
+//         // Verify ownership
+//         bytes32 node = keccak256(abi.encodePacked(BERA_NODE, keccak256(bytes(maxLengthName))));
+//         address owner = registry.owner(node);
+//         assertEq(owner, alice, "Owner does not match");
+
+//         vm.stopPrank();
+//     }
+
+//     function test_registrationFailsWithInvalidCharacters() public {
+//         setLaunchTimeInPast();
+
+//         vm.startPrank(alice);
+//         vm.deal(alice, 1 ether);
+
+//         RegistrarController.RegisterRequest memory req = defaultRequest();
+//         req.name = "invalid$name";
+
+//         vm.expectRevert(RegistrarController.InvalidName.selector);
+//         registrar.register{value: 1 ether}(req);
+//         vm.stopPrank();
+//     }
+
+// function test_registrarOnlyAcceptsExactPayment() public {
+//     setLaunchTimeInPast();
+
+//     vm.startPrank(alice);
+//     vm.deal(alice, 2 ether); // More than required
+
+//     vm.expectRevert(RegistrarController.IncorrectPaymentAmount.selector);
+//     registrar.register{value: 2 ether}(defaultRequest());
+//     vm.stopPrank();
+// }
+
+
+// function test_registrarRefundsExcessPayment() public {
+//     setLaunchTimeInPast();
+
+//     vm.startPrank(alice);
+//     uint256 initialBalance = alice.balance;
+//     vm.deal(alice, 2 ether); // More than required
+
+//     registrar.register{value: 2 ether}(defaultRequest());
+
+//     uint256 finalBalance = alice.balance;
+//     uint256 expectedBalance = initialBalance - 1 ether; // Registration cost is 1 ether
+//     assertEq(finalBalance, expectedBalance, "Excess payment was not refunded");
+
+//     vm.stopPrank();
+// }
 
 
     // getEnsAddress => resolve(bytes, bytes) => https://viem.sh/docs/ens/actions/getEnsAddress
