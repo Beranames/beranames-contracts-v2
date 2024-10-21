@@ -23,6 +23,10 @@ contract BaseTest is Test {
     address public chris;
     address public derek;
 
+    // honey and weth
+    address public honey;
+    address public weth;
+
     function setUp() public virtual {
         utils = new Utils();
 
@@ -40,6 +44,10 @@ contract BaseTest is Test {
         bob = utils.initializeAccount("Bob");
         chris = utils.initializeAccount("Chris");
         derek = utils.initializeAccount("Derek");
+
+        // honey and weth
+        honey = address(0x1234567890123456789012345678901234567890); // Fake ERC20 address for honey
+        weth = address(0x1234567890123456789012345678901234567891); // Fake ERC20 address for weth
     }
 
     modifier prank(address account) {

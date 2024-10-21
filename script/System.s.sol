@@ -13,6 +13,9 @@ import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
+import {BeraAuctionHouse} from "src/auction/BeraAuctionHouse.sol";
+import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IWETH} from "src/auction/interfaces/IWETH.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 
@@ -33,6 +36,8 @@ contract ContractScript is Script {
     PriceOracle public priceOracle;
 
     UniversalResolver public universalResolver;
+
+    BeraAuctionHouse public auctionHouse;
 
     // Addresses
     // TODO: Update these with the correct addresses
@@ -109,6 +114,14 @@ contract ContractScript is Script {
         // Deploy the Universal Resovler
         string[] memory urls = new string[](0);
         universalResolver = new UniversalResolver(address(registry), urls);
+
+        // Deploy the auction house
+        // TODO: update honey and weth addresses
+        auctionHouse = new BeraAuctionHouse(
+            baseRegistrar, resolver, IERC20(address(0)), IWETH(address(0)), 1 days, 365 days, 1 ether, 10 seconds, 1
+        );
+        auctionHouse.transferOwnership(address(registrarAdmin));
+        baseRegistrar.addController(address(auctionHouse));
 
         // TODO: Add test domains / initial mints here
 
