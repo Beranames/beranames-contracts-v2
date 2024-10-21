@@ -16,13 +16,7 @@ import {NameEncoder} from "src/resolver/libraries/NameEncoder.sol";
 import {BytesUtils} from "src/resolver/libraries/BytesUtils.sol";
 import {HexUtils} from "src/resolver/libraries/HexUtils.sol";
 
-error OffchainLookup(
-    address sender,
-    string[] urls,
-    bytes callData,
-    bytes4 callbackFunction,
-    bytes extraData
-);
+error OffchainLookup(address sender, string[] urls, bytes callData, bytes4 callbackFunction, bytes extraData);
 
 error ResolverNotFound();
 
@@ -51,9 +45,9 @@ struct OffchainLookupExtraData {
 }
 
 interface BatchGateway {
-    function query(
-        OffchainLookupCallData[] memory data
-    ) external returns (bool[] memory failures, bytes[] memory responses);
+    function query(OffchainLookupCallData[] memory data)
+        external
+        returns (bool[] memory failures, bytes[] memory responses);
 }
 
 /**
@@ -84,49 +78,28 @@ contract UniversalResolver is ERC165, Ownable {
      * @param data The resolution data, as specified in ENSIP-10.
      * @return The result of resolving the name.
      */
-    function resolve(
-        bytes calldata name,
-        bytes memory data
-    ) external view returns (bytes memory, address) {
-        return
-            _resolveSingle(
-                name,
-                data,
-                batchGatewayURLs,
-                this.resolveSingleCallback.selector,
-                ""
-            );
+    function resolve(bytes calldata name, bytes memory data) external view returns (bytes memory, address) {
+        return _resolveSingle(name, data, batchGatewayURLs, this.resolveSingleCallback.selector, "");
     }
 
-    function resolve(
-        bytes calldata name,
-        bytes[] memory data
-    ) external view returns (bytes[] memory, address) {
+    function resolve(bytes calldata name, bytes[] memory data) external view returns (bytes[] memory, address) {
         return resolve(name, data, batchGatewayURLs);
     }
 
-    function resolve(
-        bytes calldata name,
-        bytes memory data,
-        string[] memory gateways
-    ) external view returns (bytes memory, address) {
-        return
-            _resolveSingle(
-                name,
-                data,
-                gateways,
-                this.resolveSingleCallback.selector,
-                ""
-            );
+    function resolve(bytes calldata name, bytes memory data, string[] memory gateways)
+        external
+        view
+        returns (bytes memory, address)
+    {
+        return _resolveSingle(name, data, gateways, this.resolveSingleCallback.selector, "");
     }
 
-    function resolve(
-        bytes calldata name,
-        bytes[] memory data,
-        string[] memory gateways
-    ) public view returns (bytes[] memory, address) {
-        return
-            _resolve(name, data, gateways, this.resolveCallback.selector, "");
+    function resolve(bytes calldata name, bytes[] memory data, string[] memory gateways)
+        public
+        view
+        returns (bytes[] memory, address)
+    {
+        return _resolve(name, data, gateways, this.resolveCallback.selector, "");
     }
 
     function _resolveSingle(
@@ -138,13 +111,7 @@ contract UniversalResolver is ERC165, Ownable {
     ) public view returns (bytes memory, address) {
         bytes[] memory dataArr = new bytes[](1);
         dataArr[0] = data;
-        (bytes[] memory results, address resolver) = _resolve(
-            name,
-            dataArr,
-            gateways,
-            callbackFunction,
-            metaData
-        );
+        (bytes[] memory results, address resolver) = _resolve(name, dataArr, gateways, callbackFunction, metaData);
         return (results[0], resolver);
     }
 
@@ -155,7 +122,7 @@ contract UniversalResolver is ERC165, Ownable {
         bytes4 callbackFunction,
         bytes memory metaData
     ) internal view returns (bytes[] memory results, address resolverAddress) {
-        (BeraDefaultResolver resolver, , uint256 finalOffset) = findResolver(name);
+        (BeraDefaultResolver resolver,, uint256 finalOffset) = findResolver(name);
         resolverAddress = address(resolver);
         if (resolverAddress == address(0)) {
             revert ResolverNotFound();
@@ -165,21 +132,12 @@ contract UniversalResolver is ERC165, Ownable {
 
         results = _multicall(
             MulticallData(
-                name,
-                data,
-                gateways,
-                callbackFunction,
-                isWildcard,
-                resolverAddress,
-                metaData,
-                new bool[](data.length)
+                name, data, gateways, callbackFunction, isWildcard, resolverAddress, metaData, new bool[](data.length)
             )
         );
     }
 
-    function reverse(
-        bytes calldata reverseName
-    ) external view returns (string memory, address, address, address) {
+    function reverse(bytes calldata reverseName) external view returns (string memory, address, address, address) {
         return reverse(reverseName, batchGatewayURLs);
     }
 
@@ -188,31 +146,16 @@ contract UniversalResolver is ERC165, Ownable {
      * @param reverseName The reverse name to resolve, in normalised and DNS-encoded form. e.g. b6E040C9ECAaE172a89bD561c5F73e1C48d28cd9.addr.reverse
      * @return The resolved name, the resolved address, the reverse resolver address, and the resolver address.
      */
-    function reverse(
-        bytes calldata reverseName,
-        string[] memory gateways
-    ) public view returns (string memory, address, address, address) {
-        bytes memory encodedCall = abi.encodeCall(
-            INameResolver.name,
-            reverseName.namehash(0)
-        );
-        (
-            bytes memory resolvedReverseData,
-            address reverseResolverAddress
-        ) = _resolveSingle(
-                reverseName,
-                encodedCall,
-                gateways,
-                this.reverseCallback.selector,
-                ""
-            );
+    function reverse(bytes calldata reverseName, string[] memory gateways)
+        public
+        view
+        returns (string memory, address, address, address)
+    {
+        bytes memory encodedCall = abi.encodeCall(INameResolver.name, reverseName.namehash(0));
+        (bytes memory resolvedReverseData, address reverseResolverAddress) =
+            _resolveSingle(reverseName, encodedCall, gateways, this.reverseCallback.selector, "");
 
-        return
-            getForwardDataFromReverse(
-                resolvedReverseData,
-                reverseResolverAddress,
-                gateways
-            );
+        return getForwardDataFromReverse(resolvedReverseData, reverseResolverAddress, gateways);
     }
 
     function getForwardDataFromReverse(
@@ -222,126 +165,70 @@ contract UniversalResolver is ERC165, Ownable {
     ) internal view returns (string memory, address, address, address) {
         string memory resolvedName = abi.decode(resolvedReverseData, (string));
 
-        (bytes memory encodedName, bytes32 namehash) = resolvedName
-            .dnsEncodeName();
+        (bytes memory encodedName, bytes32 namehash) = resolvedName.dnsEncodeName();
 
         bytes memory encodedCall = abi.encodeCall(IAddrResolver.addr, namehash);
-        bytes memory metaData = abi.encode(
-            resolvedName,
-            reverseResolverAddress
-        );
-        (bytes memory resolvedData, address resolverAddress) = this
-            ._resolveSingle(
-                encodedName,
-                encodedCall,
-                gateways,
-                this.reverseCallback.selector,
-                metaData
-            );
+        bytes memory metaData = abi.encode(resolvedName, reverseResolverAddress);
+        (bytes memory resolvedData, address resolverAddress) =
+            this._resolveSingle(encodedName, encodedCall, gateways, this.reverseCallback.selector, metaData);
 
         address resolvedAddress = abi.decode(resolvedData, (address));
 
-        return (
-            resolvedName,
-            resolvedAddress,
-            reverseResolverAddress,
-            resolverAddress
-        );
+        return (resolvedName, resolvedAddress, reverseResolverAddress, resolverAddress);
     }
 
-    function resolveSingleCallback(
-        bytes calldata response,
-        bytes calldata extraData
-    ) external view returns (bytes memory, address) {
-        (bytes[] memory results, address resolver, , ) = _resolveCallback(
-            response,
-            extraData,
-            this.resolveSingleCallback.selector
-        );
+    function resolveSingleCallback(bytes calldata response, bytes calldata extraData)
+        external
+        view
+        returns (bytes memory, address)
+    {
+        (bytes[] memory results, address resolver,,) =
+            _resolveCallback(response, extraData, this.resolveSingleCallback.selector);
         return (results[0], resolver);
     }
 
-    function resolveCallback(
-        bytes calldata response,
-        bytes calldata extraData
-    ) external view returns (bytes[] memory, address) {
-        (bytes[] memory results, address resolver, , ) = _resolveCallback(
-            response,
-            extraData,
-            this.resolveCallback.selector
-        );
+    function resolveCallback(bytes calldata response, bytes calldata extraData)
+        external
+        view
+        returns (bytes[] memory, address)
+    {
+        (bytes[] memory results, address resolver,,) =
+            _resolveCallback(response, extraData, this.resolveCallback.selector);
         return (results, resolver);
     }
 
-    function reverseCallback(
-        bytes calldata response,
-        bytes calldata extraData
-    ) external view returns (string memory, address, address, address) {
-        (
-            bytes[] memory resolvedData,
-            address resolverAddress,
-            string[] memory gateways,
-            bytes memory metaData
-        ) = _resolveCallback(
-                response,
-                extraData,
-                this.reverseCallback.selector
-            );
+    function reverseCallback(bytes calldata response, bytes calldata extraData)
+        external
+        view
+        returns (string memory, address, address, address)
+    {
+        (bytes[] memory resolvedData, address resolverAddress, string[] memory gateways, bytes memory metaData) =
+            _resolveCallback(response, extraData, this.reverseCallback.selector);
 
         if (metaData.length > 0) {
-            (string memory resolvedName, address reverseResolverAddress) = abi
-                .decode(metaData, (string, address));
+            (string memory resolvedName, address reverseResolverAddress) = abi.decode(metaData, (string, address));
             address resolvedAddress = abi.decode(resolvedData[0], (address));
-            return (
-                resolvedName,
-                resolvedAddress,
-                reverseResolverAddress,
-                resolverAddress
-            );
+            return (resolvedName, resolvedAddress, reverseResolverAddress, resolverAddress);
         }
 
-        return
-            getForwardDataFromReverse(
-                resolvedData[0],
-                resolverAddress,
-                gateways
-            );
+        return getForwardDataFromReverse(resolvedData[0], resolverAddress, gateways);
     }
 
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view virtual override returns (bool) {
-        return
-            interfaceId == type(IExtendedResolver).interfaceId ||
-            super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == type(IExtendedResolver).interfaceId || super.supportsInterface(interfaceId);
     }
 
-    function _resolveCallback(
-        bytes calldata response,
-        bytes calldata extraData,
-        bytes4 callbackFunction
-    )
+    function _resolveCallback(bytes calldata response, bytes calldata extraData, bytes4 callbackFunction)
         internal
         view
         returns (bytes[] memory, address, string[] memory, bytes memory)
     {
         MulticallData memory multicallData;
         multicallData.callbackFunction = callbackFunction;
-        (bool[] memory failures, bytes[] memory responses) = abi.decode(
-            response,
-            (bool[], bytes[])
-        );
+        (bool[] memory failures, bytes[] memory responses) = abi.decode(response, (bool[], bytes[]));
         OffchainLookupExtraData[] memory extraDatas;
-        (
-            multicallData.isWildcard,
-            multicallData.resolver,
-            multicallData.gateways,
-            multicallData.metaData,
-            extraDatas
-        ) = abi.decode(
-            extraData,
-            (bool, address, string[], bytes, OffchainLookupExtraData[])
-        );
+        (multicallData.isWildcard, multicallData.resolver, multicallData.gateways, multicallData.metaData, extraDatas) =
+            abi.decode(extraData, (bool, address, string[], bytes, OffchainLookupExtraData[]));
         require(responses.length <= extraDatas.length);
         multicallData.data = new bytes[](extraDatas.length);
         multicallData.failures = new bool[](extraDatas.length);
@@ -356,21 +243,14 @@ contract UniversalResolver is ERC165, Ownable {
                     multicallData.data[i] = responses[offchainCount];
                 } else {
                     multicallData.data[i] = abi.encodeWithSelector(
-                        extraDatas[i].callbackFunction,
-                        responses[offchainCount],
-                        extraDatas[i].data
+                        extraDatas[i].callbackFunction, responses[offchainCount], extraDatas[i].data
                     );
                 }
                 offchainCount = offchainCount + 1;
             }
         }
 
-        return (
-            _multicall(multicallData),
-            multicallData.resolver,
-            multicallData.gateways,
-            multicallData.metaData
-        );
+        return (_multicall(multicallData), multicallData.resolver, multicallData.gateways, multicallData.metaData);
     }
 
     /**
@@ -383,39 +263,23 @@ contract UniversalResolver is ERC165, Ownable {
      * @return extraData If `target` did not revert, is empty. Otherwise, contains a `OffchainLookupExtraData` struct.
      * @return result Whether the call succeeded.
      */
-    function callWithOffchainLookupPropagation(
-        address target,
-        bytes memory data
-    )
+    function callWithOffchainLookupPropagation(address target, bytes memory data)
         internal
         view
-        returns (
-            bool offchain,
-            bytes memory returnData,
-            OffchainLookupExtraData memory extraData,
-            bool result
-        )
+        returns (bool offchain, bytes memory returnData, OffchainLookupExtraData memory extraData, bool result)
     {
         result = LowLevelCallUtils.functionStaticCall(address(target), data);
         uint256 size = LowLevelCallUtils.returnDataSize();
 
         if (result) {
-            return (
-                false,
-                LowLevelCallUtils.readReturnData(0, size),
-                extraData,
-                true
-            );
+            return (false, LowLevelCallUtils.readReturnData(0, size), extraData, true);
         }
 
         // Failure
         if (size >= 4) {
             bytes memory errorId = LowLevelCallUtils.readReturnData(0, 4);
             // Offchain lookup. Decode the revert message and create our own that nests it.
-            bytes memory revertData = LowLevelCallUtils.readReturnData(
-                4,
-                size - 4
-            );
+            bytes memory revertData = LowLevelCallUtils.readReturnData(4, size - 4);
             if (bytes4(errorId) == OffchainLookup.selector) {
                 (
                     address wrappedSender,
@@ -423,22 +287,10 @@ contract UniversalResolver is ERC165, Ownable {
                     bytes memory wrappedCallData,
                     bytes4 wrappedCallbackFunction,
                     bytes memory wrappedExtraData
-                ) = abi.decode(
-                        revertData,
-                        (address, string[], bytes, bytes4, bytes)
-                    );
+                ) = abi.decode(revertData, (address, string[], bytes, bytes4, bytes));
                 if (wrappedSender == target) {
-                    returnData = abi.encode(
-                        OffchainLookupCallData(
-                            wrappedSender,
-                            wrappedUrls,
-                            wrappedCallData
-                        )
-                    );
-                    extraData = OffchainLookupExtraData(
-                        wrappedCallbackFunction,
-                        wrappedExtraData
-                    );
+                    returnData = abi.encode(OffchainLookupCallData(wrappedSender, wrappedUrls, wrappedCallData));
+                    extraData = OffchainLookupExtraData(wrappedCallbackFunction, wrappedExtraData);
                     return (true, returnData, extraData, false);
                 }
             } else {
@@ -456,21 +308,12 @@ contract UniversalResolver is ERC165, Ownable {
      * @return namehash The namehash of the full name.
      * @return finalOffset The offset of the first label with a resolver.
      */
-    function findResolver(
-        bytes calldata name
-    ) public view returns (BeraDefaultResolver, bytes32, uint256) {
-        (
-            address resolver,
-            bytes32 namehash,
-            uint256 finalOffset
-        ) = findResolver(name, 0);
+    function findResolver(bytes calldata name) public view returns (BeraDefaultResolver, bytes32, uint256) {
+        (address resolver, bytes32 namehash, uint256 finalOffset) = findResolver(name, 0);
         return (BeraDefaultResolver(resolver), namehash, finalOffset);
     }
 
-    function findResolver(
-        bytes calldata name,
-        uint256 offset
-    ) internal view returns (address, bytes32, uint256) {
+    function findResolver(bytes calldata name, uint256 offset) internal view returns (address, bytes32, uint256) {
         uint256 labelLength = uint256(uint8(name[offset]));
         if (labelLength == 0) {
             return (address(0), bytes32(0), offset);
@@ -478,23 +321,16 @@ contract UniversalResolver is ERC165, Ownable {
         uint256 nextLabel = offset + labelLength + 1;
         bytes32 labelHash;
         if (
-            labelLength == 66 &&
             // 0x5b == '['
-            name[offset + 1] == 0x5b &&
             // 0x5d == ']'
-            name[nextLabel - 1] == 0x5d
+            labelLength == 66 && name[offset + 1] == 0x5b && name[nextLabel - 1] == 0x5d
         ) {
             // Encrypted label
-            (labelHash, ) = bytes(name[offset + 2:nextLabel - 1])
-                .hexStringToBytes32(0, 64);
+            (labelHash,) = bytes(name[offset + 2:nextLabel - 1]).hexStringToBytes32(0, 64);
         } else {
             labelHash = keccak256(name[offset + 1:nextLabel]);
         }
-        (
-            address parentresolver,
-            bytes32 parentnode,
-            uint256 parentoffset
-        ) = findResolver(name, nextLabel);
+        (address parentresolver, bytes32 parentnode, uint256 parentoffset) = findResolver(name, nextLabel);
         bytes32 node = keccak256(abi.encodePacked(parentnode, labelHash));
         address resolver = registry.resolver(node);
         if (resolver != address(0)) {
@@ -503,29 +339,21 @@ contract UniversalResolver is ERC165, Ownable {
         return (parentresolver, node, parentoffset);
     }
 
-    function _hasExtendedResolver(
-        address resolver
-    ) internal view returns (bool) {
-        try
-            BeraDefaultResolver(resolver).supportsInterface{gas: 50000}(
-                type(IExtendedResolver).interfaceId
-            )
-        returns (bool supported) {
+    function _hasExtendedResolver(address resolver) internal view returns (bool) {
+        try BeraDefaultResolver(resolver).supportsInterface{gas: 50000}(type(IExtendedResolver).interfaceId) returns (
+            bool supported
+        ) {
             return supported;
         } catch {
             return false;
         }
     }
 
-    function _multicall(
-        MulticallData memory multicallData
-    ) internal view returns (bytes[] memory results) {
+    function _multicall(MulticallData memory multicallData) internal view returns (bytes[] memory results) {
         uint256 length = multicallData.data.length;
         uint256 offchainCount = 0;
-        OffchainLookupCallData[]
-            memory callDatas = new OffchainLookupCallData[](length);
-        OffchainLookupExtraData[]
-            memory extraDatas = new OffchainLookupExtraData[](length);
+        OffchainLookupCallData[] memory callDatas = new OffchainLookupCallData[](length);
+        OffchainLookupExtraData[] memory extraDatas = new OffchainLookupExtraData[](length);
         results = new bytes[](length);
         bool isCallback = multicallData.name.length == 0;
         bool hasExtendedResolver = _hasExtendedResolver(multicallData.resolver);
@@ -542,23 +370,13 @@ contract UniversalResolver is ERC165, Ownable {
                 continue;
             }
             if (!isCallback && hasExtendedResolver) {
-                item = abi.encodeCall(
-                    IExtendedResolver.resolve,
-                    (multicallData.name, item)
-                );
+                item = abi.encodeCall(IExtendedResolver.resolve, (multicallData.name, item));
             }
-            (
-                bool offchain,
-                bytes memory returnData,
-                OffchainLookupExtraData memory extraData,
-                bool success
-            ) = callWithOffchainLookupPropagation(multicallData.resolver, item);
+            (bool offchain, bytes memory returnData, OffchainLookupExtraData memory extraData, bool success) =
+                callWithOffchainLookupPropagation(multicallData.resolver, item);
 
             if (offchain) {
-                callDatas[offchainCount] = abi.decode(
-                    returnData,
-                    (OffchainLookupCallData)
-                );
+                callDatas[offchainCount] = abi.decode(returnData, (OffchainLookupCallData));
                 extraDatas[i] = extraData;
                 offchainCount += 1;
                 continue;

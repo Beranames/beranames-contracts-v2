@@ -9,21 +9,21 @@ contract StringUtilsTest is Test {
 
     function setUp() public {}
 
-    function test_asciiString() public {
+    function test_asciiString() public pure {
         string memory s = "foobar";
         uint256 expectedCount = 6;
         uint256 actualCount = s.strlen();
         assertEq(actualCount, expectedCount, "ASCII string character count mismatch");
     }
 
-    function test_basicEmojis() public {
+    function test_basicEmojis() public pure {
         string memory s = unicode"😀😃😄😁";
         uint256 expectedCount = 4;
         uint256 actualCount = s.strlen();
         assertEq(actualCount, expectedCount, "Basic emoji character count mismatch");
     }
 
-    function test_complexEmoji_single() public {
+    function test_complexEmoji_single() public pure {
         // Family emoji: 👨‍👩‍👧‍👦
         string memory s = unicode"👨‍👩‍👧‍👦";
         uint256 expectedCount = 1;
@@ -31,7 +31,7 @@ contract StringUtilsTest is Test {
         assertEq(actualCount, expectedCount, "Complex emoji (family) character count mismatch");
     }
 
-    function test_mixedString() public {
+    function test_mixedString() public pure {
         // Mixed string with ASCII, basic emojis, and complex emojis
         string memory s = unicode"foob👋👨‍👩‍👧‍👦";
         uint256 expectedCount = 6;
@@ -39,14 +39,14 @@ contract StringUtilsTest is Test {
         assertEq(actualCount, expectedCount, "Mixed string character count mismatch");
     }
 
-    function test_emptyString() public {
+    function test_emptyString() public pure {
         string memory s = "";
         uint256 expectedCount = 0;
         uint256 actualCount = s.strlen();
         assertEq(actualCount, expectedCount, "Empty string character count should be zero");
     }
 
-    function test_invalidUTF8() public {
+    function test_invalidUTF8() public pure {
         // Malformed UTF-8 sequence (invalid start byte)
         bytes memory invalidBytes = hex"FF";
         string memory s = string(invalidBytes);
@@ -55,7 +55,7 @@ contract StringUtilsTest is Test {
         assertEq(actualCount, expectedCount, "Invalid UTF-8 character count mismatch");
     }
 
-    function test_flagEmoji() public {
+    function test_flagEmoji() public pure {
         // Flag emoji: 🇺🇳 (United Nations)
         string memory s = unicode"🇺🇳";
         uint256 expectedCount = 1;
@@ -63,7 +63,7 @@ contract StringUtilsTest is Test {
         assertEq(actualCount, expectedCount, "Flag emoji character count mismatch");
     }
 
-    function test_skinToneModifier() public {
+    function test_skinToneModifier() public pure {
         // Emoji with skin tone modifier: 👍🏽
         string memory s = unicode"👍🏽";
         uint256 expectedCount = 1;
@@ -71,7 +71,7 @@ contract StringUtilsTest is Test {
         assertEq(actualCount, expectedCount, "Emoji with skin tone modifier character count mismatch");
     }
 
-    function test_genderModifier() public {
+    function test_genderModifier() public pure {
         // Emoji with gender modifier: 🧑‍🚀
         string memory s = unicode"🧑‍🚀";
         uint256 expectedCount = 1;

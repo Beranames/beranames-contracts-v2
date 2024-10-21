@@ -5,11 +5,9 @@ pragma solidity ^0.8.19;
 interface IBeraAuctionHouse {
     struct Auction {
         uint256 tokenId;
-
         uint128 amount;
         uint64 startTime;
         uint64 endTime;
-
         // The address of the current highest bid
         address payable bidder;
         // Whether or not the auction has been settled
@@ -17,7 +15,7 @@ interface IBeraAuctionHouse {
     }
 
     /// @dev We use this struct as the return value of the `auction` function, to maintain backwards compatibility.
-    /// @param labelHash The labelHash for the name (max X characters) 
+    /// @param labelHash The labelHash for the name (max X characters)
     /// @param amount The current highest bid amount
     /// @param startTime The auction period start time
     /// @param endTime The auction period end time
@@ -26,12 +24,10 @@ interface IBeraAuctionHouse {
     struct AuctionView {
         // Slug 1
         uint256 tokenId;
-        
         // Slug 2
         uint128 amount;
         uint64 startTime;
         uint64 endTime;
-        
         // Slug 3
         address payable bidder;
         bool settled;
@@ -88,21 +84,16 @@ interface IBeraAuctionHouse {
 
     function auction() external view returns (AuctionView memory);
 
-    function getSettlements(
-        uint256 auctionCount
-    ) external view returns (Settlement[] memory settlements);
+    function getSettlements(uint256 auctionCount) external view returns (Settlement[] memory settlements);
 
     function getPrices(uint256 auctionCount) external view returns (uint256[] memory prices);
 
-    function getSettlements(
-        uint256 startId,
-        uint256 endId
-    ) external view returns (Settlement[] memory settlements);
+    function getSettlements(uint256 startId, uint256 endId) external view returns (Settlement[] memory settlements);
 
-    function getSettlementsFromIdtoTimestamp(
-        uint256 startId,
-        uint256 endTimestamp
-    ) external view returns (Settlement[] memory settlements);
+    function getSettlementsFromIdtoTimestamp(uint256 startId, uint256 endTimestamp)
+        external
+        view
+        returns (Settlement[] memory settlements);
 
     function auctionDuration() external view returns (uint256);
     function registrationDuration() external view returns (uint256);

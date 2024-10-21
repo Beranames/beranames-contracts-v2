@@ -22,12 +22,7 @@ import {IBeraAuctionHouse} from "src/auction/interfaces/IBeraAcutionHouse.sol";
 
 import {BeraDefaultResolver} from "src/resolver/Resolver.sol";
 
-contract BeraAuctionHouse is
-    IBeraAuctionHouse,
-    Pausable,
-    ReentrancyGuard,
-    Ownable
-{
+contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownable {
     /// @notice A hard-coded cap on time buffer to prevent accidental auction disabling if set with a very high value.
     uint56 public constant MAX_TIME_BUFFER = 1 days;
 
@@ -91,9 +86,7 @@ contract BeraAuctionHouse is
     /**
      * @notice Settle the current auction, mint a new name, and put it up for auction.
      */
-    function settleCurrentAndCreateNewAuction(
-        string memory label_
-    ) external override whenNotPaused {
+    function settleCurrentAndCreateNewAuction(string memory label_) external override whenNotPaused {
         _settleAuction();
         _createAuction(label_);
     }
@@ -113,19 +106,14 @@ contract BeraAuctionHouse is
     function createBid(uint256 tokenId) external payable override {
         IBeraAuctionHouse.Auction memory _auction = auctionStorage;
 
-        (
-            uint192 _reservePrice,
-            uint56 _timeBuffer,
-            uint8 _minBidIncrementPercentage
-        ) = (reservePrice, timeBuffer, minBidIncrementPercentage);
+        (uint192 _reservePrice, uint56 _timeBuffer, uint8 _minBidIncrementPercentage) =
+            (reservePrice, timeBuffer, minBidIncrementPercentage);
 
         require(_auction.tokenId == tokenId, "tokenId not up for auction");
         require(block.timestamp < _auction.endTime, "Auction expired");
         require(msg.value >= _reservePrice, "Must send at least reservePrice");
         require(
-            msg.value >=
-                _auction.amount +
-                    ((_auction.amount * _minBidIncrementPercentage) / 100),
+            msg.value >= _auction.amount + ((_auction.amount * _minBidIncrementPercentage) / 100),
             "Must send more than last bid by minBidIncrementPercentage amount"
         );
 
@@ -138,9 +126,7 @@ contract BeraAuctionHouse is
         emit AuctionBid(_auction.tokenId, msg.sender, msg.value, extended);
 
         if (extended) {
-            auctionStorage.endTime = _auction.endTime = uint40(
-                block.timestamp + _timeBuffer
-            );
+            auctionStorage.endTime = _auction.endTime = uint40(block.timestamp + _timeBuffer);
             emit AuctionExtended(_auction.tokenId, _auction.endTime);
         }
 
@@ -156,15 +142,14 @@ contract BeraAuctionHouse is
      * @notice Get the current auction.
      */
     function auction() external view returns (AuctionView memory) {
-        return
-            AuctionView({
-                tokenId: auctionStorage.tokenId,
-                amount: auctionStorage.amount,
-                startTime: auctionStorage.startTime,
-                endTime: auctionStorage.endTime,
-                bidder: auctionStorage.bidder,
-                settled: auctionStorage.settled
-            });
+        return AuctionView({
+            tokenId: auctionStorage.tokenId,
+            amount: auctionStorage.amount,
+            startTime: auctionStorage.startTime,
+            endTime: auctionStorage.endTime,
+            bidder: auctionStorage.bidder,
+            settled: auctionStorage.settled
+        });
     }
 
     /**
@@ -206,9 +191,7 @@ contract BeraAuctionHouse is
      * @notice Set the auction reserve price.
      * @dev Only callable by the owner.
      */
-    function setReservePrice(
-        uint192 _reservePrice
-    ) external override onlyOwner {
+    function setReservePrice(uint192 _reservePrice) external override onlyOwner {
         reservePrice = _reservePrice;
 
         emit AuctionReservePriceUpdated(_reservePrice);
@@ -218,16 +201,12 @@ contract BeraAuctionHouse is
      * @notice Set the auction minimum bid increment percentage.
      * @dev Only callable by the owner.
      */
-    function setMinBidIncrementPercentage(
-        uint8 _minBidIncrementPercentage
-    ) external override onlyOwner {
+    function setMinBidIncrementPercentage(uint8 _minBidIncrementPercentage) external override onlyOwner {
         require(_minBidIncrementPercentage > 0, "must be greater than zero");
 
         minBidIncrementPercentage = _minBidIncrementPercentage;
 
-        emit AuctionMinBidIncrementPercentageUpdated(
-            _minBidIncrementPercentage
-        );
+        emit AuctionMinBidIncrementPercentageUpdated(_minBidIncrementPercentage);
     }
 
     /**
@@ -238,12 +217,8 @@ contract BeraAuctionHouse is
      */
     function _createAuction(string memory label_) internal {
         try base.registerWithRecord(
-            uint256(keccak256(abi.encodePacked(label_))),
-            address(this),
-            registrationDuration,
-            address(resolver),
-            0
-        ) returns (uint256 tokenId, uint256 ) {
+            uint256(keccak256(abi.encodePacked(label_))), address(this), registrationDuration, address(resolver), 0
+        ) returns (uint256 tokenId, uint256) {
             uint40 startTime = uint40(block.timestamp);
             uint40 endTime = startTime + uint40(auctionDuration);
 
@@ -271,10 +246,7 @@ contract BeraAuctionHouse is
 
         require(_auction.startTime != 0, "Auction hasn't begun");
         require(!_auction.settled, "Auction has already been settled");
-        require(
-            block.timestamp >= _auction.endTime,
-            "Auction hasn't completed"
-        );
+        require(block.timestamp >= _auction.endTime, "Auction hasn't completed");
 
         auctionStorage.settled = true;
 
@@ -288,9 +260,7 @@ contract BeraAuctionHouse is
             _safeTransferETHWithFallback(owner(), _auction.amount);
         }
 
-        SettlementState storage settlementState = settlementHistory[
-            _auction.tokenId
-        ];
+        SettlementState storage settlementState = settlementHistory[_auction.tokenId];
         settlementState.blockTimestamp = uint32(block.timestamp);
         settlementState.amount = ethPriceToUint64(_auction.amount);
         settlementState.winner = _auction.bidder;
@@ -312,10 +282,7 @@ contract BeraAuctionHouse is
      * @notice Transfer ETH and return the success status.
      * @dev This function only forwards 30,000 gas to the callee.
      */
-    function _safeTransferETH(
-        address to,
-        uint256 value
-    ) internal returns (bool) {
+    function _safeTransferETH(address to, uint256 value) internal returns (bool) {
         bool success;
         assembly {
             success := call(30000, to, value, 0, 0, 0, 0)
@@ -331,9 +298,7 @@ contract BeraAuctionHouse is
      * @return settlements An array of type `Settlement`, where each Settlement includes a timestamp,
      * the tokenId of that auction, the winning bid amount, and the winner's address.
      */
-    function getSettlements(
-        uint256 auctionCount
-    ) external view returns (Settlement[] memory settlements) {
+    function getSettlements(uint256 auctionCount) external view returns (Settlement[] memory settlements) {
         uint256 latestTokenId = auctionStorage.tokenId;
         if (!auctionStorage.settled && latestTokenId > 0) {
             latestTokenId -= 1;
@@ -374,9 +339,7 @@ contract BeraAuctionHouse is
      * @param auctionCount The number of price observations to get.
      * @return prices An array of uint256 prices.
      */
-    function getPrices(
-        uint256 auctionCount
-    ) external view returns (uint256[] memory prices) {
+    function getPrices(uint256 auctionCount) external view returns (uint256[] memory prices) {
         uint256 latestTokenId = auctionStorage.tokenId;
         if (!auctionStorage.settled && latestTokenId > 0) {
             latestTokenId -= 1;
@@ -386,11 +349,7 @@ contract BeraAuctionHouse is
         uint256 actualCount = 0;
 
         SettlementState memory settlementState;
-        for (
-            uint256 id = latestTokenId;
-            id > 0 && actualCount < auctionCount;
-            --id
-        ) {
+        for (uint256 id = latestTokenId; id > 0 && actualCount < auctionCount; --id) {
             settlementState = settlementHistory[id];
             require(settlementState.blockTimestamp > 1, "Missing data");
             if (settlementState.winner == address(0)) continue; // Skip auctions with no bids
@@ -409,10 +368,11 @@ contract BeraAuctionHouse is
      * @return settlements An array of type `Settlement`, where each Settlement includes a timestamp,
      * the tokenId of that auction, the winning bid amount, and the winner's address.
      */
-    function getSettlementsFromIdtoTimestamp(
-        uint256 startId,
-        uint256 endTimestamp
-    ) public view returns (Settlement[] memory settlements) {
+    function getSettlementsFromIdtoTimestamp(uint256 startId, uint256 endTimestamp)
+        public
+        view
+        returns (Settlement[] memory settlements)
+    {
         uint256 maxId = auctionStorage.tokenId;
         require(startId <= maxId, "startId too large");
         settlements = new Settlement[](maxId - startId + 1);
@@ -422,8 +382,9 @@ contract BeraAuctionHouse is
             settlementState = settlementHistory[id];
 
             // don't include the currently auctioned token if it hasn't settled
-            if ((id == maxId) && (settlementState.blockTimestamp <= 1))
+            if ((id == maxId) && (settlementState.blockTimestamp <= 1)) {
                 continue;
+            }
 
             if (settlementState.blockTimestamp > endTimestamp) break;
 
@@ -453,10 +414,7 @@ contract BeraAuctionHouse is
      * @return settlements An array of type `Settlement`, where each Settlement includes a timestamp,
      * the tokenId of that auction, the winning bid amount, and the winner's address.
      */
-    function getSettlements(
-        uint256 startId,
-        uint256 endId
-    ) external view returns (Settlement[] memory settlements) {
+    function getSettlements(uint256 startId, uint256 endId) external view returns (Settlement[] memory settlements) {
         settlements = new Settlement[](endId - startId);
         uint256 actualCount = 0;
 
@@ -493,9 +451,7 @@ contract BeraAuctionHouse is
     /**
      * @dev Convert a 64 bit 10 decimal price to a 256 bit 18 decimal price.
      */
-    function uint64PriceToUint256(
-        uint64 price
-    ) internal pure returns (uint256) {
+    function uint64PriceToUint256(uint64 price) internal pure returns (uint256) {
         return uint256(price) * 1e8;
     }
 }

@@ -8,17 +8,15 @@ library HexUtils {
      * @param idx The offset to start parsing at
      * @param lastIdx The (exclusive) last index in `str` to consider. Use `str.length` to scan the whole string.
      */
-    function hexStringToBytes32(
-        bytes memory str,
-        uint256 idx,
-        uint256 lastIdx
-    ) internal pure returns (bytes32 r, bool valid) {
+    function hexStringToBytes32(bytes memory str, uint256 idx, uint256 lastIdx)
+        internal
+        pure
+        returns (bytes32 r, bool valid)
+    {
         valid = true;
         assembly {
             // check that the index to read to is not past the end of the string
-            if gt(lastIdx, mload(str)) {
-                revert(0, 0)
-            }
+            if gt(lastIdx, mload(str)) { revert(0, 0) }
 
             function getHex(c) -> ascii {
                 // chars 48-57: 0-9
@@ -41,11 +39,7 @@ library HexUtils {
             }
 
             let ptr := add(str, 32)
-            for {
-                let i := idx
-            } lt(i, lastIdx) {
-                i := add(i, 2)
-            } {
+            for { let i := idx } lt(i, lastIdx) { i := add(i, 2) } {
                 let byte1 := getHex(byte(0, mload(add(ptr, i))))
                 let byte2 := getHex(byte(0, mload(add(ptr, add(i, 1)))))
                 // if either byte is invalid, set invalid and break loop
@@ -65,11 +59,7 @@ library HexUtils {
      * @param idx The offset to start parsing at
      * @param lastIdx The (exclusive) last index in `str` to consider. Use `str.length` to scan the whole string.
      */
-    function hexToAddress(
-        bytes memory str,
-        uint256 idx,
-        uint256 lastIdx
-    ) internal pure returns (address, bool) {
+    function hexToAddress(bytes memory str, uint256 idx, uint256 lastIdx) internal pure returns (address, bool) {
         if (lastIdx - idx < 40) return (address(0x0), false);
         (bytes32 r, bool valid) = hexStringToBytes32(str, idx, lastIdx);
         return (address(uint160(uint256(r))), valid);

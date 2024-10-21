@@ -242,18 +242,12 @@ contract SystemTest is BaseTest {
 
         // Hit the universal resolver to verify resolution of the records above
         bytes memory dnsEncName_ = bytes("\x06testor\x04bera\x00");
-        universalResolver.resolve(
-            dnsEncName_, 
-            abi.encodeWithSelector(
-                IAddrResolver.addr.selector, 
-                node_
-            )  
-        );
-        
+        universalResolver.resolve(dnsEncName_, abi.encodeWithSelector(IAddrResolver.addr.selector, node_));
+
         vm.stopPrank();
     }
 
-    function test_create_and_resolve__02() public prank(alice) {        
+    function test_create_and_resolve__02() public prank(alice) {
         vm.deal(alice, 1 ether);
         string memory label_ = "foo";
 
@@ -274,121 +268,105 @@ contract SystemTest is BaseTest {
 
         // Hit the universal resolver to verify resolution of the records above
         bytes memory dnsEncName_ = bytes("\x03foo\x04bera\x00");
-        (
-            bytes memory resp_,
-            address calledResolver_
-        ) = universalResolver.resolve(
-            dnsEncName_, 
-            abi.encodeWithSelector(
-                IAddrResolver.addr.selector, 
-                node_
-            )  
-        );
+        (bytes memory resp_, address calledResolver_) =
+            universalResolver.resolve(dnsEncName_, abi.encodeWithSelector(IAddrResolver.addr.selector, node_));
         // assertEq(address(bytes32(resp_)), address(0));
         assertEq(calledResolver_, address(resolver));
 
         // Set the address & resolve again
         resolver.setAddr(node_, alice);
-        (resp_, ) = universalResolver.resolve(
-            dnsEncName_, 
-            abi.encodeWithSelector(
-                IAddrResolver.addr.selector, 
-                node_
-            )  
-        );
+        (resp_,) = universalResolver.resolve(dnsEncName_, abi.encodeWithSelector(IAddrResolver.addr.selector, node_));
         // assertEq(address(resp_), alice);
 
         // TODO: Mock out flow
         // // dns_encode(f39fd6e51aad88f6f4ce6ab8827279cfffb92266.addr.reverse)
-        // bytes memory dnsEncodedReverseName = "\x1450BDD53e5888531868d86A4745b0588cc56837A0\x04addr\x07reverse\x00"; 
+        // bytes memory dnsEncodedReverseName = "\x1450BDD53e5888531868d86A4745b0588cc56837A0\x04addr\x07reverse\x00";
         // (string memory returnedName,,,) = universalResolver.reverse(dnsEncodedReverseName);
         // require(
         //     keccak256(abi.encodePacked(returnedName)) == keccak256(abi.encodePacked("foo.bera")), "name does not match"
         // );
-        
+
         vm.stopPrank();
     }
-    
-//     function test_registrationWithZeroLengthNameFails() public {
-//         setLaunchTimeInPast();
 
-//         vm.startPrank(alice);
-//         vm.deal(alice, 1 ether);
+    //     function test_registrationWithZeroLengthNameFails() public {
+    //         setLaunchTimeInPast();
 
-//         RegistrarController.RegisterRequest memory req = defaultRequest();
-//         req.name = "";
+    //         vm.startPrank(alice);
+    //         vm.deal(alice, 1 ether);
 
-//         vm.expectRevert(RegistrarController.InvalidName.selector);
-//         registrar.register{value: 1 ether}(req);
-//         vm.stopPrank();
-//     }
+    //         RegistrarController.RegisterRequest memory req = defaultRequest();
+    //         req.name = "";
 
-//     function test_registrationWithMaximumLengthName() public {
-//         setLaunchTimeInPast();
+    //         vm.expectRevert(RegistrarController.InvalidName.selector);
+    //         registrar.register{value: 1 ether}(req);
+    //         vm.stopPrank();
+    //     }
 
-//         vm.startPrank(alice);
-//         vm.deal(alice, 1 ether);
+    //     function test_registrationWithMaximumLengthName() public {
+    //         setLaunchTimeInPast();
 
-//         string memory maxLengthName = new string(63);
-//         for (uint i = 0; i < 63; i++) {
-//             bytes(maxLengthName)[i] = bytes1(uint8(97 + (i % 26))); // a-z
-//         }
+    //         vm.startPrank(alice);
+    //         vm.deal(alice, 1 ether);
 
-//         RegistrarController.RegisterRequest memory req = defaultRequest();
-//         req.name = maxLengthName;
+    //         string memory maxLengthName = new string(63);
+    //         for (uint i = 0; i < 63; i++) {
+    //             bytes(maxLengthName)[i] = bytes1(uint8(97 + (i % 26))); // a-z
+    //         }
 
-//         registrar.register{value: 1 ether}(req);
+    //         RegistrarController.RegisterRequest memory req = defaultRequest();
+    //         req.name = maxLengthName;
 
-//         // Verify ownership
-//         bytes32 node = keccak256(abi.encodePacked(BERA_NODE, keccak256(bytes(maxLengthName))));
-//         address owner = registry.owner(node);
-//         assertEq(owner, alice, "Owner does not match");
+    //         registrar.register{value: 1 ether}(req);
 
-//         vm.stopPrank();
-//     }
+    //         // Verify ownership
+    //         bytes32 node = keccak256(abi.encodePacked(BERA_NODE, keccak256(bytes(maxLengthName))));
+    //         address owner = registry.owner(node);
+    //         assertEq(owner, alice, "Owner does not match");
 
-//     function test_registrationFailsWithInvalidCharacters() public {
-//         setLaunchTimeInPast();
+    //         vm.stopPrank();
+    //     }
 
-//         vm.startPrank(alice);
-//         vm.deal(alice, 1 ether);
+    //     function test_registrationFailsWithInvalidCharacters() public {
+    //         setLaunchTimeInPast();
 
-//         RegistrarController.RegisterRequest memory req = defaultRequest();
-//         req.name = "invalid$name";
+    //         vm.startPrank(alice);
+    //         vm.deal(alice, 1 ether);
 
-//         vm.expectRevert(RegistrarController.InvalidName.selector);
-//         registrar.register{value: 1 ether}(req);
-//         vm.stopPrank();
-//     }
+    //         RegistrarController.RegisterRequest memory req = defaultRequest();
+    //         req.name = "invalid$name";
 
-// function test_registrarOnlyAcceptsExactPayment() public {
-//     setLaunchTimeInPast();
+    //         vm.expectRevert(RegistrarController.InvalidName.selector);
+    //         registrar.register{value: 1 ether}(req);
+    //         vm.stopPrank();
+    //     }
 
-//     vm.startPrank(alice);
-//     vm.deal(alice, 2 ether); // More than required
+    // function test_registrarOnlyAcceptsExactPayment() public {
+    //     setLaunchTimeInPast();
 
-//     vm.expectRevert(RegistrarController.IncorrectPaymentAmount.selector);
-//     registrar.register{value: 2 ether}(defaultRequest());
-//     vm.stopPrank();
-// }
+    //     vm.startPrank(alice);
+    //     vm.deal(alice, 2 ether); // More than required
 
+    //     vm.expectRevert(RegistrarController.IncorrectPaymentAmount.selector);
+    //     registrar.register{value: 2 ether}(defaultRequest());
+    //     vm.stopPrank();
+    // }
 
-// function test_registrarRefundsExcessPayment() public {
-//     setLaunchTimeInPast();
+    // function test_registrarRefundsExcessPayment() public {
+    //     setLaunchTimeInPast();
 
-//     vm.startPrank(alice);
-//     uint256 initialBalance = alice.balance;
-//     vm.deal(alice, 2 ether); // More than required
+    //     vm.startPrank(alice);
+    //     uint256 initialBalance = alice.balance;
+    //     vm.deal(alice, 2 ether); // More than required
 
-//     registrar.register{value: 2 ether}(defaultRequest());
+    //     registrar.register{value: 2 ether}(defaultRequest());
 
-//     uint256 finalBalance = alice.balance;
-//     uint256 expectedBalance = initialBalance - 1 ether; // Registration cost is 1 ether
-//     assertEq(finalBalance, expectedBalance, "Excess payment was not refunded");
+    //     uint256 finalBalance = alice.balance;
+    //     uint256 expectedBalance = initialBalance - 1 ether; // Registration cost is 1 ether
+    //     assertEq(finalBalance, expectedBalance, "Excess payment was not refunded");
 
-//     vm.stopPrank();
-// }
-
+    //     vm.stopPrank();
+    // }
 
     // getEnsAddress => resolve(bytes, bytes) => https://viem.sh/docs/ens/actions/getEnsAddress
     // function test_viem_getEnsAddress() public {

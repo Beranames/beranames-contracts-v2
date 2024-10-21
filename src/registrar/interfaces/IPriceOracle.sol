@@ -20,11 +20,7 @@ interface IPriceOracle {
     /// @param expires The expiry of the label.
     /// @param duration The duration of the registration.
     /// @return The price of the label.
-    function price(
-        string calldata label, 
-        uint256 expires, 
-        uint256 duration
-    ) external view returns (Price memory);
+    function price(string calldata label, uint256 expires, uint256 duration) external view returns (Price memory);
 
     /// @notice The price for a given label.
     /// @param label The label to query.
@@ -32,10 +28,8 @@ interface IPriceOracle {
     /// @param duration The duration of the registration.
     /// @param payment The payment method.
     /// @return The price of the label.
-    function price(
-        string calldata label, 
-        uint256 expires, 
-        uint256 duration,
-        Payment payment
-    ) external view returns (Price memory);
+    function price(string calldata label, uint256 expires, uint256 duration, Payment payment)
+        external
+        view
+        returns (Price memory);
 }

@@ -14,24 +14,12 @@ library LowLevelCallUtils {
      * @param data The data to pass to the call.
      * @return success True if the call succeeded, or false if it reverts.
      */
-    function functionStaticCall(
-        address target,
-        bytes memory data
-    ) internal view returns (bool success) {
+    function functionStaticCall(address target, bytes memory data) internal view returns (bool success) {
         assembly {
             // Check if the target address has code
-            if iszero(extcodesize(target)) {
-                revert(0, 0)
-            }
+            if iszero(extcodesize(target)) { revert(0, 0) }
             // Perform the static call
-            success := staticcall(
-                gas(),
-                target,
-                add(data, 32),
-                mload(data),
-                0,
-                0
-            )
+            success := staticcall(gas(), target, add(data, 32), mload(data), 0, 0)
         }
     }
 
@@ -49,10 +37,7 @@ library LowLevelCallUtils {
      * @param offset Offset into the return data.
      * @param length Number of bytes to return.
      */
-    function readReturnData(
-        uint256 offset,
-        uint256 length
-    ) internal pure returns (bytes memory data) {
+    function readReturnData(uint256 offset, uint256 length) internal pure returns (bytes memory data) {
         data = new bytes(length);
         assembly {
             returndatacopy(add(data, 32), offset, length)
