@@ -41,7 +41,7 @@ contract FlowTest is SystemTest {
         vm.prank(address(registrar));
         reverseRegistrar.setDefaultResolver(address(resolver));
         // claim and set name
-        vm.startPrank(alice);  
+        vm.startPrank(alice);
         bytes32 reverseNode = reverseRegistrar.setName("cien.bera");
         bytes32 nodeReverse = reverseRegistrar.node(alice);
         assertEq(reverseNode, nodeReverse, "reverse nodes");
