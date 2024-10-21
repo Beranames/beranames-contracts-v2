@@ -105,6 +105,8 @@ interface IBeraAuctionHouse {
 
     event AuctionMinBidIncrementPercentageUpdated(uint256 minBidIncrementPercentage);
 
+    event AuctionCreationError(string reason);
+
     function settleAuction() external;
 
     function settleCurrentAndCreateNewAuction(string memory label_) external;

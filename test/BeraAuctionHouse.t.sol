@@ -6,7 +6,6 @@ import {BaseRegistrar} from "src/registrar/types/BaseRegistrar.sol";
 import {BeraDefaultResolver} from "src/resolver/Resolver.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IWETH} from "src/auction/interfaces/IWETH.sol";
-import {BERA_NODE} from "script/System.s.sol";
 import {IBeraAuctionHouse} from "src/auction/interfaces/IBeraAuctionHouse.sol";
 
 import {SystemTest} from "./System.t.sol";
@@ -33,8 +32,8 @@ contract BeraAuctionHouseTest is SystemTest {
 
         // check that auction house owns the nft
         assertEq(baseRegistrar.balanceOf(address(auctionHouse)), 1, "auctionHouse base balance");
-        assertEq(baseRegistrar.isAvailable(getNftId(label)), false, "auctionHouse base available");
-        assertEq(baseRegistrar.ownerOf(getNftId(label)), address(auctionHouse), "auctionHouse base owner");
+        assertEq(baseRegistrar.isAvailable(getTokenId(label)), false, "auctionHouse base available");
+        assertEq(baseRegistrar.ownerOf(getTokenId(label)), address(auctionHouse), "auctionHouse base owner");
     }
 
     function test_createBid_success() public {
@@ -108,9 +107,13 @@ contract BeraAuctionHouseTest is SystemTest {
         auctionHouse.settleAuction();
         vm.stopPrank();
 
+        // check balances
         assertEq(address(auctionHouse).balance, 0 ether, "auctionHouse balance");
         assertEq(address(alice).balance, 1 ether, "alice balance");
         assertEq(address(bob).balance, 0 ether, "bob balance");
+
+        // check nft ownership
+        assertEq(baseRegistrar.ownerOf(getTokenId(label)), address(bob), "nft owner");
     }
 
     function test_settleAuction_failure_auctionNotBegun() public {}
@@ -119,12 +122,51 @@ contract BeraAuctionHouseTest is SystemTest {
 
     function test_settleAuction_failure_auctionNotCompleted() public {}
 
-    function getNftId(string memory label_) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(label_)));
+    function test_settleCurrentAndCreateNewAuction_success() public {
+        string memory label = unicode"😀";
+        unpause(label);
+
+        vm.prank(alice);
+        vm.deal(alice, 1 ether);
+        auctionHouse.createBid{value: 1 ether}(getTokenId(label));
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 1 hours);
+
+        vm.prank(bob);
+        vm.deal(bob, 2 ether);
+        auctionHouse.createBid{value: 2 ether}(getTokenId(label));
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 24 hours);
+
+        string memory newLabel = unicode"🐻";
+        vm.prank(registrarAdmin);
+        auctionHouse.settleCurrentAndCreateNewAuction(newLabel);
+        vm.stopPrank();
+
+        // check balances
+        assertEq(address(auctionHouse).balance, 0 ether, "auctionHouse balance");
+        assertEq(address(alice).balance, 1 ether, "alice balance");
+        assertEq(address(bob).balance, 0 ether, "bob balance");
+
+        // check nft ownership
+        assertEq(baseRegistrar.ownerOf(getTokenId(label)), address(bob), "nft owner");
+
+        // check new auction
+        assertEq(auctionHouse.paused(), false, "auctionHouse paused");
+        assertEq(auctionHouse.auction().tokenId, getTokenId(newLabel), "auctionHouse tokenId");
+        assertEq(auctionHouse.auction().amount, 0, "auctionHouse amount");
+        assertEq(auctionHouse.auction().startTime, uint40(block.timestamp), "auctionHouse startTime");
+        assertEq(auctionHouse.auction().endTime, uint40(block.timestamp + 1 days), "auctionHouse endTime");
+        assertEq(auctionHouse.auction().bidder, address(0), "auctionHouse bidder");
+        assertEq(auctionHouse.auction().settled, false, "auctionHouse settled");
     }
 
+    ////// Internal functions //////
+
     function getTokenId(string memory label_) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(BERA_NODE, bytes32(getNftId(label_)))));
+        return uint256(keccak256(abi.encodePacked(label_)));
     }
 
     function unpause(string memory label_) internal prank(registrarAdmin) {

@@ -227,14 +227,13 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * catch the revert and pause this contract.
      */
     function _createAuction(string memory label_) internal {
-        try base.registerWithRecord(
-            uint256(keccak256(abi.encodePacked(label_))), address(this), registrationDuration, address(resolver), 0
-        ) returns (uint256 tokenId, uint256) {
+        uint256 id = uint256(keccak256(abi.encodePacked(label_)));
+        try base.registerWithRecord(id, address(this), registrationDuration, address(resolver), 0) returns (uint256) {
             uint40 startTime = uint40(block.timestamp);
             uint40 endTime = startTime + uint40(auctionDuration);
 
             auctionStorage = Auction({
-                tokenId: tokenId,
+                tokenId: id,
                 amount: 0,
                 startTime: startTime,
                 endTime: endTime,
@@ -242,9 +241,10 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
                 settled: false
             });
 
-            emit AuctionCreated(tokenId, startTime, endTime);
-        } catch Error(string memory) {
+            emit AuctionCreated(id, startTime, endTime);
+        } catch Error(string memory reason) {
             _pause();
+            emit AuctionCreationError(reason);
         }
     }
 
