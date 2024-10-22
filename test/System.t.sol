@@ -334,68 +334,19 @@ contract SystemTest is BaseTest {
         require(resolvedAddress == alice, "address does not match");
     }
 
-    //     function test_registrationWithZeroLengthNameFails() public {
-    //         setLaunchTimeInPast();
+    function test_registrationWithZeroLengthNameFails() public {
+        setLaunchTimeInPast();
 
-    //         vm.startPrank(alice);
-    //         vm.deal(alice, 1 ether);
+        vm.startPrank(alice);
+        vm.deal(alice, 1 ether);
 
-    //         RegistrarController.RegisterRequest memory req = defaultRequest();
-    //         req.name = "";
+        RegistrarController.RegisterRequest memory req = defaultRequest();
+        req.name = "";
 
-    //         vm.expectRevert(RegistrarController.InvalidName.selector);
-    //         registrar.register{value: 1 ether}(req);
-    //         vm.stopPrank();
-    //     }
-
-    //     function test_registrationWithMaximumLengthName() public {
-    //         setLaunchTimeInPast();
-
-    //         vm.startPrank(alice);
-    //         vm.deal(alice, 1 ether);
-
-    //         string memory maxLengthName = new string(63);
-    //         for (uint i = 0; i < 63; i++) {
-    //             bytes(maxLengthName)[i] = bytes1(uint8(97 + (i % 26))); // a-z
-    //         }
-
-    //         RegistrarController.RegisterRequest memory req = defaultRequest();
-    //         req.name = maxLengthName;
-
-    //         registrar.register{value: 1 ether}(req);
-
-    //         // Verify ownership
-    //         bytes32 node = keccak256(abi.encodePacked(BERA_NODE, keccak256(bytes(maxLengthName))));
-    //         address owner = registry.owner(node);
-    //         assertEq(owner, alice, "Owner does not match");
-
-    //         vm.stopPrank();
-    //     }
-
-    //     function test_registrationFailsWithInvalidCharacters() public {
-    //         setLaunchTimeInPast();
-
-    //         vm.startPrank(alice);
-    //         vm.deal(alice, 1 ether);
-
-    //         RegistrarController.RegisterRequest memory req = defaultRequest();
-    //         req.name = "invalid$name";
-
-    //         vm.expectRevert(RegistrarController.InvalidName.selector);
-    //         registrar.register{value: 1 ether}(req);
-    //         vm.stopPrank();
-    //     }
-
-    // function test_registrarOnlyAcceptsExactPayment() public {
-    //     setLaunchTimeInPast();
-
-    //     vm.startPrank(alice);
-    //     vm.deal(alice, 2 ether); // More than required
-
-    //     vm.expectRevert(RegistrarController.IncorrectPaymentAmount.selector);
-    //     registrar.register{value: 2 ether}(defaultRequest());
-    //     vm.stopPrank();
-    // }
+        vm.expectRevert(abi.encodeWithSelector(RegistrarController.NameNotAvailable.selector, ""));
+        registrar.register{value: 1 ether}(req);
+        vm.stopPrank();
+    }
 
     // function test_registrarRefundsExcessPayment() public {
     //     setLaunchTimeInPast();
@@ -414,35 +365,79 @@ contract SystemTest is BaseTest {
     // }
 
     // getEnsAddress => resolve(bytes, bytes) => https://viem.sh/docs/ens/actions/getEnsAddress
-    // function test_viem_getEnsAddress() public {
-    //     address owner = universalResolver.resolve(name, data);
-    //     assertEq(owner, alice, "owner");
-    // }
+    function test_viem_getEnsAddress() public prank(alice) {
+        vm.deal(alice, 1 ether);
+
+        RegistrarController.RegisterRequest memory req = defaultRequest();
+        registrar.register{value: 1 ether}(req);
+
+        bytes32 node_ = _calculateNode(keccak256(bytes(req.name)), BERA_NODE);
+        resolver.setAddr(node_, alice);
+
+        // \x03 because foo is 3 chars
+        bytes memory dnsEncName_ = bytes("\x03foo\x04bera\x00");
+        (bytes memory resp_, address resolvedAddress) =
+            universalResolver.resolve(dnsEncName_, abi.encodeWithSelector(IAddrResolver.addr.selector, node_));
+        assertEq(abi.decode(resp_, (address)), alice, "Resolved address does not match alice");
+        assertEq(resolvedAddress, resolvedAddress, "resolver not matching");
+
+        vm.stopPrank();
+    }
+
+    // getEnsAddress => resolve(bytes, bytes) => https://viem.sh/docs/ens/actions/getEnsAddress
+    function test_viem_getEnsAddress_withData() public {
+        alice = 0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65;
+        vm.startPrank(alice);
+        vm.deal(alice, 1 ether);
+
+        RegistrarController.RegisterRequest memory req = defaultRequestWithData(alice);
+        bytes32 node_ = _calculateNode(keccak256(bytes(req.name)), BERA_NODE);
+
+        registrar.register{value: 1 ether}(req);
+
+        // \x03 because foo is 3 chars
+        bytes memory dnsEncName_ = bytes("\x03foo\x04bera\x00");
+        (bytes memory resp_, address resolvedAddress) =
+            universalResolver.resolve(dnsEncName_, abi.encodeWithSelector(IAddrResolver.addr.selector, node_));
+        assertEq(abi.decode(resp_, (address)), alice, "Resolved address does not match alice");
+        assertEq(resolvedAddress, resolvedAddress, "resolver not matching");
+
+        vm.stopPrank();
+    }
 
     // getEnsName => reverse(bytes) => https://viem.sh/docs/ens/actions/getEnsName
-    // function test_viem_getEnsName() public {
-    //     bytes32 reverseNode = reverseRegistrar.node(alice);
-    //     string memory name = universalResolver.reverse(reverseNode);
-    //     assertEq(name, "foo-bar.bera", "name");
-    // }
+    function test_viem_getEnsName() public {
+        address deterministicAddress = 0x0000000000000000000000000000000000000001;
+        vm.startPrank(deterministicAddress);
+        vm.deal(deterministicAddress, 1 ether);
+
+        registrar.register{value: 1 ether}(defaultRequestWithData(deterministicAddress));
+
+        bytes memory dnsEncodedReverseName =
+            bytes("\x280000000000000000000000000000000000000001\x04addr\x07reverse\x00");
+
+        (string memory returnedName, address resolvedAddress, address reverseResolvedAddress, address resolverAddress) =
+            universalResolver.reverse(dnsEncodedReverseName);
+        assertEq(returnedName, "foo-bar.bera", "returned name does not match foo.bera");
+        assertEq(resolvedAddress, deterministicAddress, "resolved address does not match alice");
+        assertEq(reverseResolvedAddress, address(resolver), "reverse resolved address does not match 0");
+        assertEq(resolverAddress, address(resolver), "resolver address does not match resolver");
+
+        vm.stopPrank();
+    }
 
     // getEnsResolver => findResolver(bytes) => https://viem.sh/docs/ens/actions/getEnsResolver
-    // function test_viem_getEnsResolver() public {
-    //     address resolver = universalResolver.findResolver(name);
-    //     assertEq(resolver, address(resolver), "resolver");
-    // }
+    function test_viem_getEnsResolver() public prank(alice) {
+        vm.deal(alice, 1 ether);
 
-    // getEnsText => getEnsText(bytes, bytes) => https://viem.sh/docs/ens/actions/getEnsText
-    // function test_viem_getEnsText() public {
-    //     bytes memory data = universalResolver.getEnsText(name, key);
-    //     assertEq(data, "foo-bar.bera", "data");
-    // }
+        RegistrarController.RegisterRequest memory req = defaultRequest();
+        registrar.register{value: 1 ether}(req);
 
-    // getEnsAvatar => getEnsText(bytes, bytes) with key avatar => https://viem.sh/docs/ens/actions/getEnsAvatar
-    // function test_viem_getEnsAvatar() public {
-    //     bytes memory data = universalResolver.getEnsText(name, key);
-    //     assertEq(data, "foo-bar.bera", "data");
-    // }
+        bytes memory dnsEncName_ = bytes("\x06testor\x04bera\x00");
+        (BeraDefaultResolver foundResolver,,) = universalResolver.findResolver(dnsEncName_);
+
+        assertEq(address(foundResolver), address(resolver), "resolver");
+    }
 
     function _calculateNode(bytes32 labelHash_, bytes32 parent_) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(parent_, labelHash_));
@@ -460,9 +455,39 @@ contract SystemTest is BaseTest {
         });
     }
 
+    function defaultRequestWithData(address owner_)
+        internal
+        view
+        returns (RegistrarController.RegisterRequest memory)
+    {
+        string memory name = "foo-bar";
+        bytes32 node_ = _calculateNode(keccak256(bytes(name)), BERA_NODE);
+        bytes memory payload = abi.encodeWithSignature("setAddr(bytes32,address)", node_, owner_);
+        bytes[] memory data = new bytes[](1);
+        data[0] = payload;
+
+        RegistrarController.RegisterRequest memory req = RegistrarController.RegisterRequest({
+            name: name,
+            owner: owner_,
+            duration: 365 days,
+            resolver: address(resolver),
+            data: data,
+            reverseRecord: true,
+            referrer: address(0)
+        });
+
+        return req;
+    }
+
     function setLaunchTimeInFuture() internal {
         vm.startPrank(registrarAdmin);
         registrar.setLaunchTime(block.timestamp + 10 days);
+        vm.stopPrank();
+    }
+
+    function setLaunchTimeInPast() internal {
+        vm.startPrank(registrarAdmin);
+        registrar.setLaunchTime(block.timestamp - 10 days);
         vm.stopPrank();
     }
 
