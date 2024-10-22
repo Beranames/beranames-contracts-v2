@@ -122,8 +122,10 @@ contract ContractScript is Script {
         reverseRegistrar.setController(address(registrarAdmin), true);
         reverseRegistrar.setController(address(registrar), true);
         reverseRegistrar.transferOwnership(address(registrar));
-
         // Stop broadcast
         vm.stopBroadcast();
+
+        vm.prank(registrarAdmin);
+        resolver.setRegistrarController(address(registrar));
     }
 }

@@ -137,6 +137,11 @@ contract UniversalResolver is ERC165, Ownable {
         );
     }
 
+    /**
+     * @dev Performs BNS name reverse resolution for the supplied reverse name. Called by Viem when doing getEnsName()
+     * @param reverseName The reverse name to resolve, in normalised and DNS-encoded form. e.g. b6E040C9ECAaE172a89bD561c5F73e1C48d28cd9.addr.reverse
+     * @return The resolved name, the resolved address, the reverse resolver address, and the resolver address.
+     */
     function reverse(bytes calldata reverseName) external view returns (string memory, address, address, address) {
         return reverse(reverseName, batchGatewayURLs);
     }

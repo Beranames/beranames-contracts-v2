@@ -13,6 +13,7 @@ import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
+import {AddrResolver} from "src/resolver/profiles/AddrResolver.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 
@@ -123,6 +124,10 @@ contract SystemTest is BaseTest {
         reverseRegistrar.transferOwnership(address(registrar));
 
         // Stop pranking
+        vm.stopPrank();
+
+        vm.prank(registrarAdmin);
+        resolver.setRegistrarController(address(registrar));
         vm.stopPrank();
 
         vm.warp(100_0000_0000);
@@ -247,7 +252,7 @@ contract SystemTest is BaseTest {
         vm.stopPrank();
     }
 
-    function test_create_and_resolve__02() public prank(alice) {
+    function test_create_and_resolve_with_universal_resolver() public prank(alice) {
         vm.deal(alice, 1 ether);
         string memory label_ = "foo";
 
@@ -260,33 +265,73 @@ contract SystemTest is BaseTest {
         bytes32 node_ = _calculateNode(keccak256(bytes(label_)), BERA_NODE);
         assertEq(node_, 0x2462a02c69cc8f152ee2a38a1282ee7d0331f67fe8d218f63034af91a81af59a);
 
-        // // Verify the reverse resolution was set correctly
-        // assertEq(reverseRegistrar.node(alice), node_);
-
-        // Configure base resolver records for the new name
-        resolver.setText(node_, "bera", "chain");
-
         // Hit the universal resolver to verify resolution of the records above
         bytes memory dnsEncName_ = bytes("\x03foo\x04bera\x00");
-        (bytes memory resp_, address calledResolver_) =
+        (, address calledResolver_) =
             universalResolver.resolve(dnsEncName_, abi.encodeWithSelector(IAddrResolver.addr.selector, node_));
-        // assertEq(address(bytes32(resp_)), address(0));
-        assertEq(calledResolver_, address(resolver));
+        // assertEq(resp_, abi.encode(alice), "resp_ should be alice"); //TODO: fix this
+        assertEq(calledResolver_, address(resolver), "calledResolver_ should be resolver");
+
+        // hardcoded dnsEncode(alice.addr.reverse)
+        bytes memory dnsEncodedReverseName =
+            hex"28353062646435336535383838353331383638643836613437343562303538386363353638333761300461646472077265766572736500";
+        (string memory returnedName, address resolvedAddress, address reverseResolvedAddress, address resolverAddress) =
+            universalResolver.reverse(dnsEncodedReverseName);
+        require(
+            keccak256(abi.encodePacked(returnedName)) == keccak256(abi.encodePacked("foo.bera")), "name does not match"
+        );
+        // resolvedAddress should be 0x0 because the reverse resolver is not set
+        require(resolvedAddress == address(0x0), "address does not match");
 
         // Set the address & resolve again
         resolver.setAddr(node_, alice);
-        (resp_,) = universalResolver.resolve(dnsEncName_, abi.encodeWithSelector(IAddrResolver.addr.selector, node_));
-        // assertEq(address(resp_), alice);
 
-        // TODO: Mock out flow
-        // // dns_encode(f39fd6e51aad88f6f4ce6ab8827279cfffb92266.addr.reverse)
-        // bytes memory dnsEncodedReverseName = "\x1450BDD53e5888531868d86A4745b0588cc56837A0\x04addr\x07reverse\x00";
-        // (string memory returnedName,,,) = universalResolver.reverse(dnsEncodedReverseName);
-        // require(
-        //     keccak256(abi.encodePacked(returnedName)) == keccak256(abi.encodePacked("foo.bera")), "name does not match"
-        // );
+        dnsEncodedReverseName =
+            hex"28353062646435336535383838353331383638643836613437343562303538386363353638333761300461646472077265766572736500";
+        (returnedName, resolvedAddress, reverseResolvedAddress, resolverAddress) =
+            universalResolver.reverse(dnsEncodedReverseName);
+        require(
+            keccak256(abi.encodePacked(returnedName)) == keccak256(abi.encodePacked("foo.bera")), "name does not match"
+        );
+        require(resolvedAddress == alice, "address does not match");
+    }
 
-        vm.stopPrank();
+    function test_create_and_resolve_with_universal_resolver_and_data() public prank(alice) {
+        vm.deal(alice, 1 ether);
+        string memory label_ = "foo";
+
+        // Set up a basic request & register the name
+        RegistrarController.RegisterRequest memory req = defaultRequest();
+        req.name = label_;
+        bytes32 node_ = _calculateNode(keccak256(bytes(label_)), BERA_NODE);
+        bytes memory payload = abi.encodeWithSignature("setAddr(bytes32,address)", node_, alice);
+        bytes[] memory data = new bytes[](1);
+        data[0] = payload;
+        req.data = data;
+        registrar.register{value: 1 ether}(req);
+
+        bytes memory dnsEncName_ = bytes("\x03foo\x04bera\x00");
+        (, address calledResolver_) =
+            universalResolver.resolve(dnsEncName_, abi.encodeWithSelector(IAddrResolver.addr.selector, node_));
+        // assertEq(resp_, abi.encode(alice), "resp_ should be alice"); //TODO: fix this
+        assertEq(calledResolver_, address(resolver), "calledResolver_ should be resolver");
+
+        // hardcoded dnsEncode(alice.addr.reverse)
+        bytes memory dnsEncodedReverseName =
+            hex"28353062646435336535383838353331383638643836613437343562303538386363353638333761300461646472077265766572736500";
+        (string memory returnedName, address resolvedAddress,,) = universalResolver.reverse(dnsEncodedReverseName);
+        require(
+            keccak256(abi.encodePacked(returnedName)) == keccak256(abi.encodePacked("foo.bera")), "name does not match"
+        );
+        // alice, because the reverse resolver is set
+        require(resolvedAddress == address(alice), "address does not match");
+        dnsEncodedReverseName =
+            hex"28353062646435336535383838353331383638643836613437343562303538386363353638333761300461646472077265766572736500";
+        (returnedName, resolvedAddress,,) = universalResolver.reverse(dnsEncodedReverseName);
+        require(
+            keccak256(abi.encodePacked(returnedName)) == keccak256(abi.encodePacked("foo.bera")), "name does not match"
+        );
+        require(resolvedAddress == alice, "address does not match");
     }
 
     //     function test_registrationWithZeroLengthNameFails() public {
