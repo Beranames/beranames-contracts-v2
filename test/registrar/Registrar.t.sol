@@ -20,6 +20,57 @@ contract RegistrarTest is SystemTest {
         mintToAuctionHouse();
     }
 
+    function test_public_sale_mint__success() public {
+        vm.startPrank(alice);
+        deal(address(alice), 10 ether);
+
+        string memory nameToMint = unicode"alice🐻‍❄️";
+        RegistrarController.RegisterRequest memory request = RegistrarController.RegisterRequest({
+            name: nameToMint,
+            owner: alice,
+            duration: 365 days,
+            resolver: address(resolver),
+            data: new bytes[](0),
+            reverseRecord: true,
+            referrer: address(0)
+        });
+        registrar.register{value: 1 ether}(request);
+
+        vm.stopPrank();
+    }
+
+    function test_whitelist_mint__success() public {
+        // set launch time in 10 days
+        vm.prank(registrarAdmin);
+        registrar.setLaunchTime(block.timestamp + 10 days);
+        vm.stopPrank();
+
+        // mint with success
+        vm.startPrank(alice);
+        deal(address(alice), 10 ether);
+
+        string memory nameToMint = unicode"alice🐻‍❄️-whitelisted";
+        RegistrarController.RegisterRequest memory request = RegistrarController.RegisterRequest({
+            name: nameToMint,
+            owner: alice,
+            duration: 365 days,
+            resolver: address(resolver),
+            data: new bytes[](0),
+            reverseRecord: true,
+            referrer: address(0)
+        });
+
+        bytes memory payload = abi.encode(request.owner, request.referrer, request.duration, request.name);
+        bytes32 payloadHash = keccak256(payload);
+        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
+        bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, payloadHash));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, prefixedHash);
+
+        bytes memory signature = abi.encodePacked(r, s, v);
+        registrar.whitelistRegister{value: 1 ether}(request, signature);
+    }
+
     function test_register_twoChars_success() public prankWithBalance(alice, 1 ether) {
         string memory name = "ab";
         RegistrarController.RegisterRequest memory req = defaultRequest(name, alice);

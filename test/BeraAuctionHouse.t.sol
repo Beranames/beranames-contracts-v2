@@ -11,19 +11,26 @@ import {IBeraAuctionHouse} from "src/auction/interfaces/IBeraAuctionHouse.sol";
 import {SystemTest} from "./System.t.sol";
 
 contract BeraAuctionHouseTest is SystemTest {
+    string constant EMOJI = unicode"💩";
+    string constant BEAR_EMOJI = unicode"🐻";
+
+    function setUp() public virtual override {
+        super.setUp();
+
+        mintToAuctionHouse();
+    }
+
     function test_owner() public view {
         assertEq(address(auctionHouse.owner()), address(registrarAdmin), "auctionHouse owner");
     }
 
     function test_unpause() public {
-        string memory label = unicode"😀";
-
         vm.expectEmit(true, false, false, false);
-        emit IBeraAuctionHouse.AuctionCreated(getTokenId(label), 1, 1);
-        unpause(label);
+        emit IBeraAuctionHouse.AuctionCreated(getTokenId(EMOJI), 1, 1);
+        unpause(EMOJI);
 
         assertEq(auctionHouse.paused(), false, "auctionHouse paused");
-        assertEq(auctionHouse.auction().tokenId, getTokenId(label), "auctionHouse tokenId");
+        assertEq(auctionHouse.auction().tokenId, getTokenId(EMOJI), "auctionHouse tokenId");
         assertEq(auctionHouse.auction().amount, 0, "auctionHouse amount");
         assertEq(auctionHouse.auction().startTime, uint40(block.timestamp), "auctionHouse startTime");
         assertEq(auctionHouse.auction().endTime, uint40(block.timestamp + 1 days), "auctionHouse endTime");
@@ -31,22 +38,21 @@ contract BeraAuctionHouseTest is SystemTest {
         assertEq(auctionHouse.auction().settled, false, "auctionHouse settled");
 
         // check that auction house owns the nft
-        assertEq(baseRegistrar.balanceOf(address(auctionHouse)), 1, "auctionHouse base balance");
-        assertEq(baseRegistrar.isAvailable(getTokenId(label)), false, "auctionHouse base available");
-        assertEq(baseRegistrar.ownerOf(getTokenId(label)), address(auctionHouse), "auctionHouse base owner");
+        assertEq(baseRegistrar.balanceOf(address(auctionHouse)), 2, "auctionHouse base balance");
+        assertEq(baseRegistrar.isAvailable(getTokenId(EMOJI)), false, "auctionHouse base available");
+        assertEq(baseRegistrar.ownerOf(getTokenId(EMOJI)), address(auctionHouse), "auctionHouse base owner");
     }
 
     function test_createBid_success() public {
-        string memory label = unicode"😀";
-        unpause(label);
+        unpause(EMOJI);
 
         vm.prank(alice);
         vm.deal(alice, 1 ether);
 
         vm.expectEmit(true, true, true, true);
-        emit IBeraAuctionHouse.AuctionBid(getTokenId(label), address(alice), 1 ether, false);
+        emit IBeraAuctionHouse.AuctionBid(getTokenId(EMOJI), address(alice), 1 ether, false);
 
-        auctionHouse.createBid{value: 1 ether}(getTokenId(label));
+        auctionHouse.createBid{value: 1 ether}(getTokenId(EMOJI));
 
         assertEq(auctionHouse.auction().amount, 1 ether, "auctionHouse amount");
         assertEq(auctionHouse.auction().bidder, address(alice), "auctionHouse bidder");
@@ -56,16 +62,15 @@ contract BeraAuctionHouseTest is SystemTest {
     function test_createBid_success_auctionExtended() public {}
 
     function test_createBid_success_refundLastBidder() public {
-        string memory label = unicode"😀";
         test_createBid_success();
 
         vm.prank(bob);
         vm.deal(bob, 2 ether);
 
         vm.expectEmit(true, true, true, true);
-        emit IBeraAuctionHouse.AuctionBid(getTokenId(label), address(bob), 2 ether, false);
+        emit IBeraAuctionHouse.AuctionBid(getTokenId(EMOJI), address(bob), 2 ether, false);
 
-        auctionHouse.createBid{value: 2 ether}(getTokenId(label));
+        auctionHouse.createBid{value: 2 ether}(getTokenId(EMOJI));
 
         assertEq(auctionHouse.auction().amount, 2 ether, "auctionHouse amount");
         assertEq(auctionHouse.auction().bidder, address(bob), "auctionHouse bidder");
@@ -82,19 +87,18 @@ contract BeraAuctionHouseTest is SystemTest {
     function test_createBid_failure_invalidBidIncrement() public {}
 
     function test_settleAuction_success() public {
-        string memory label = unicode"😀";
-        unpause(label);
+        unpause(EMOJI);
 
         vm.prank(alice);
         vm.deal(alice, 1 ether);
-        auctionHouse.createBid{value: 1 ether}(getTokenId(label));
+        auctionHouse.createBid{value: 1 ether}(getTokenId(EMOJI));
         vm.stopPrank();
 
         vm.warp(block.timestamp + 1 hours);
 
         vm.prank(bob);
         vm.deal(bob, 2 ether);
-        auctionHouse.createBid{value: 2 ether}(getTokenId(label));
+        auctionHouse.createBid{value: 2 ether}(getTokenId(EMOJI));
         vm.stopPrank();
 
         vm.warp(block.timestamp + 24 hours);
@@ -113,7 +117,7 @@ contract BeraAuctionHouseTest is SystemTest {
         assertEq(address(bob).balance, 0 ether, "bob balance");
 
         // check nft ownership
-        assertEq(baseRegistrar.ownerOf(getTokenId(label)), address(bob), "nft owner");
+        assertEq(baseRegistrar.ownerOf(getTokenId(EMOJI)), address(bob), "nft owner");
     }
 
     function test_settleAuction_failure_auctionNotBegun() public {}
@@ -123,24 +127,23 @@ contract BeraAuctionHouseTest is SystemTest {
     function test_settleAuction_failure_auctionNotCompleted() public {}
 
     function test_settleCurrentAndCreateNewAuction_success() public {
-        string memory label = unicode"😀";
-        unpause(label);
+        unpause(EMOJI);
 
         vm.prank(alice);
         vm.deal(alice, 1 ether);
-        auctionHouse.createBid{value: 1 ether}(getTokenId(label));
+        auctionHouse.createBid{value: 1 ether}(getTokenId(EMOJI));
         vm.stopPrank();
 
         vm.warp(block.timestamp + 1 hours);
 
         vm.prank(bob);
         vm.deal(bob, 2 ether);
-        auctionHouse.createBid{value: 2 ether}(getTokenId(label));
+        auctionHouse.createBid{value: 2 ether}(getTokenId(EMOJI));
         vm.stopPrank();
 
         vm.warp(block.timestamp + 24 hours);
 
-        string memory newLabel = unicode"🐻";
+        string memory newLabel = BEAR_EMOJI;
         vm.prank(registrarAdmin);
         auctionHouse.settleCurrentAndCreateNewAuction(newLabel);
         vm.stopPrank();
@@ -151,7 +154,7 @@ contract BeraAuctionHouseTest is SystemTest {
         assertEq(address(bob).balance, 0 ether, "bob balance");
 
         // check nft ownership
-        assertEq(baseRegistrar.ownerOf(getTokenId(label)), address(bob), "nft owner");
+        assertEq(baseRegistrar.ownerOf(getTokenId(EMOJI)), address(bob), "nft owner");
 
         // check new auction
         assertEq(auctionHouse.paused(), false, "auctionHouse paused");
@@ -171,5 +174,10 @@ contract BeraAuctionHouseTest is SystemTest {
 
     function unpause(string memory label_) internal prank(registrarAdmin) {
         auctionHouse.unpause(label_);
+    }
+
+    function mintToAuctionHouse() internal prank(address(auctionHouse)) {
+        baseRegistrar.registerWithRecord(getTokenId(EMOJI), address(auctionHouse), 365 days, address(resolver), 0);
+        baseRegistrar.registerWithRecord(getTokenId(BEAR_EMOJI), address(auctionHouse), 365 days, address(resolver), 0);
     }
 }
