@@ -55,4 +55,11 @@ contract BaseTest is Test {
         _;
         vm.stopPrank();
     }
+
+    modifier prankWithBalance(address account, uint256 balance) {
+        vm.startPrank(account);
+        vm.deal(account, balance);
+        _;
+        vm.stopPrank();
+    }
 }
