@@ -84,7 +84,9 @@ contract ContractScript is Script {
 
         // Deploy layer 3 components: public registrar
         // Create the PriceOracle
-        priceOracle = new PriceOracle();
+        address pythAddress = 0x2880aB155794e7179c9eE2e38200202908C17B43;
+        bytes32 beraUsdPythPriceFeedId = 0x40dd8c66a9582c51a1b03a41d6c68ee5c2c04c8b9c054e81d0f95602ffaefe2f;
+        priceOracle = new PriceOracle(pythAddress, beraUsdPythPriceFeedId);
 
         // Create the WhitelistValidator
         whitelistValidator = new WhitelistValidator(address(registrarAdmin), address(signer));

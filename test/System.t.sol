@@ -13,6 +13,10 @@ import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
+import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
+import {MockPyth} from "@pythnetwork/pyth-sdk-solidity/MockPyth.sol";
+
+import {console} from "forge-std/console.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 
@@ -39,6 +43,9 @@ contract SystemTest is BaseTest {
     PriceOracle public priceOracle;
 
     UniversalResolver public universalResolver;
+
+    MockPyth pyth;
+    bytes32 BERA_USD_PYTH_PRICE_FEED_ID = bytes32(uint256(0x1));
 
     function setUp() public override {
         // Setup base test
@@ -86,7 +93,8 @@ contract SystemTest is BaseTest {
 
         // Deploy layer 3 components: public registrar
         // Create the PriceOracle
-        priceOracle = new PriceOracle();
+        pyth = new MockPyth(60, 1);
+        priceOracle = new PriceOracle(address(pyth), BERA_USD_PYTH_PRICE_FEED_ID);
 
         // Create the WhitelistValidator
         whitelistValidator = new WhitelistValidator(address(registrarAdmin), address(signer));
@@ -122,10 +130,37 @@ contract SystemTest is BaseTest {
         reverseRegistrar.setController(address(registrar), true);
         reverseRegistrar.transferOwnership(address(registrar));
 
+        setBeraPrice(1);
         // Stop pranking
         vm.stopPrank();
 
         vm.warp(100_0000_0000);
+    }
+
+    // BERA
+    // https://docs.pyth.network/price-feeds/create-your-first-pyth-app/evm/part-1
+    function createBeraUpdate(int64 beraPrice) private view returns (bytes[] memory) {
+        bytes[] memory updateData = new bytes[](1);
+        updateData[0] = pyth.createPriceFeedUpdateData(
+            BERA_USD_PYTH_PRICE_FEED_ID,
+            beraPrice * 100000, // price
+            10 * 100000, // confidence
+            -5, // exponent
+            beraPrice * 100000, // emaPrice
+            10 * 100000, // emaConfidence
+            uint64(block.timestamp), // publishTime
+            uint64(block.timestamp) // prevPublishTime
+        );
+
+        return updateData;
+    }
+
+    function setBeraPrice(int64 beraPrice) private {
+        bytes[] memory updateData = createBeraUpdate(beraPrice);
+        uint256 value = pyth.getUpdateFee(updateData);
+        // this triggers out of funds no idea why => TODO: fix
+        vm.deal(address(this), value * 2);
+        pyth.updatePriceFeeds{value: value}(updateData);
     }
 
     function test_initialized() public view {
@@ -142,7 +177,9 @@ contract SystemTest is BaseTest {
         vm.startPrank(alice);
         vm.deal(alice, 1 ether);
 
-        registrar.register{value: 1 ether}(defaultRequest());
+        RegistrarController.RegisterRequest memory req = defaultRequest();
+        console.log("price", registrar.registerPrice(req.name, req.duration));
+        registrar.register{value: 1 ether}(req);
 
         // Check the resolution
         bytes32 reverseNode = reverseRegistrar.node(alice);
