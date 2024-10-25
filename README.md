@@ -79,7 +79,7 @@ Or the caller can claim the reverse record for any address by directly calling t
    reverseRegistrar.setName(string name) public returns (bytes32 node)
 ```
 
-When called by account `x`, sets the resolver for the name `hex(x) + '.addr.reverse'` to a default resolver, and sets the name record on that name to the specified name. This method facilitates setting up simple reverse records for users in a single transaction.
+When called by account `x`, sets the resolver for the name `hex(x) + '.addr.reverse'` to a default resolver, and sets the name record on that name to the specified _name_. This method facilitates setting up simple reverse records for users in a single transaction.
 
 #### Reverse Resolving
 
@@ -97,4 +97,39 @@ where `node` is the reverse record node obtained from the reverse registrar call
 
 ### Universal Resolver
 
-> TODO: Add universal resolver methods for reverse resolution.
+As for the forward resolution, the universal resolver can be used to resolve the reverse record in a single rpc call.
+
+```solidity
+   universalResolver.reverse(bytes calldata name) external view returns (string, address, address, address)
+```
+
+where `name` is the dnsEncoded name to resolve.
+
+**returns**: the resolved name, the resolved address, the reverse resolver address, and the resolver address.
+
+## Subdomains
+
+Subdomains are not ERC721 compliant. The base registrar is the ERC721 contract that is the owner of the `.bera` node.
+
+If you already own a `.bera` domain name you can create as many subdomains as you want at no additional cost.
+
+You can create subdomains by calling the `setSubnodeRecord` function of the BNS registry. This function takes the parent node and the label of the subdomain to create.
+
+```solidity
+   registry.setSubnodeRecord(bytes32 parentNode, bytes32 label, address owner, address resolver, uint64 ttl)
+```
+
+where:
+
+- `parentNode` is the node of the parent domain.
+- `label` is the keccak256 hash of the subdomain label to register.
+- `owner` is the address of the new owner of the subdomain.
+- `resolver` is the address of the resolver of the subdomain.
+- `ttl` is optional and if not provided the default ttl will be used.
+
+The subdomain will be registered under the parent node and the label provided. The subdomain will have its own resolver, and the owner of the subdomain will be able to update it at any time. If the resolver is not provided, the resolver of the parent node will be found during the resolution process provided that the **universal resolver** is used.
+
+In order to "delete" a subdomain, the owner of the subdomain can call the `setSubnodeRecord` function of the BNS registry with the same parent node, label, and setting the owner and the others record associated to the subdomain to the zero address.
+If more records than the resolver have been set for the subdomain, they will need to be explicity "deleted" by setting them to the zero address using the `set*` functions of the resolver.
+
+To reclaim and register the same subdomain again it will be sufficient to call the `setSubnodeRecord` function of the BNS registry with the same parent node and label.

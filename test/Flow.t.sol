@@ -17,6 +17,7 @@ import {IAddrResolver} from "src/resolver/interfaces/IAddrResolver.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 import {NameEncoder} from "src/resolver/libraries/NameEncoder.sol";
+import {IERC721Errors} from "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol";
 
 import {console} from "lib/forge-std/src/console.sol";
 
@@ -49,11 +50,7 @@ contract FlowTest is BaseTest {
 
         // baseRegistrar
         baseRegistrar = new BaseRegistrar(
-            registry,
-            address(deployer),
-            BERA_NODE,
-            "https://token-uri.com",
-            "https://collection-uri.com"
+            registry, address(deployer), BERA_NODE, "https://token-uri.com", "https://collection-uri.com"
         );
 
         // reverseRegistrar needs to be set up in order to claim the reverse node
@@ -69,12 +66,8 @@ contract FlowTest is BaseTest {
 
         // resolver needs to be created after the reverse node is set up because
         // inside the constructor the owner claims the reverse node
-        resolver = new BeraDefaultResolver(
-            registry,
-            address(baseRegistrar),
-            address(reverseRegistrar),
-            address(deployer)
-        );
+        resolver =
+            new BeraDefaultResolver(registry, address(baseRegistrar), address(reverseRegistrar), address(deployer));
 
         // Create the BERA node
         registry.setSubnodeRecord(
@@ -86,7 +79,7 @@ contract FlowTest is BaseTest {
 
         // whitelistValidator
         whitelistValidator = new WhitelistValidator(address(registrarAdmin), address(signer));
-        
+
         // reservedRegistry
         reservedRegistry = new ReservedRegistry(address(deployer));
 
@@ -139,21 +132,32 @@ contract FlowTest is BaseTest {
         assertEq(registry.resolver(bytes32(0)), address(resolver), "resolver 0x00 node");
     }
 
+    // BASIC FLOW TESTS --------------------------------------------------------------------------------------------------
+
     function test_register_success() public {
         vm.startPrank(alice);
         vm.deal(alice, 10 ether);
         // register
-        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord());
+        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(alice));
         vm.stopPrank();
         // check name is registered
         assertEq(baseRegistrar.ownerOf(uint256(keccak256("cien"))), alice);
+    }
+
+    function test_register_name_is_erc721_compliant() public {
+        vm.startPrank(alice);
+        vm.deal(alice, 10 ether);
+        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(alice));
+        uint256 tokenId = uint256(keccak256(bytes("cien")));
+        assertEq(baseRegistrar.ownerOf(tokenId), alice);
+        vm.stopPrank();
     }
 
     function test_forwardResolution_success() public {
         vm.startPrank(alice);
         vm.deal(alice, 10 ether);
         // register and set addr
-        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord());
+        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(alice));
         bytes32 label = keccak256(bytes("cien"));
         bytes32 subnode = _calculateNode(label, BERA_NODE);
         resolver.setAddr(subnode, address(alice));
@@ -166,7 +170,7 @@ contract FlowTest is BaseTest {
         vm.startPrank(alice);
         vm.deal(alice, 10 ether);
         // register and set addr
-        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord());
+        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(alice));
         // claim and set name
         bytes32 reverseNode = reverseRegistrar.setName("cien.bera");
         bytes32 nodeReverse = reverseRegistrar.node(alice);
@@ -176,14 +180,16 @@ contract FlowTest is BaseTest {
         vm.stopPrank();
     }
 
+    // UNIVERSAL RESOLVER TESTS ------------------------------------------------------------------------------------------
+
     function test_UR_forwardResolution_returns_0x00_if_setAddr_not_called() public {
         vm.startPrank(alice);
         vm.deal(alice, 10 ether);
         // register and set addr
-        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord());
+        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(alice));
         bytes32 node = _calculateNode(keccak256(bytes("cien")), BERA_NODE);
         // dns encode name
-        (bytes memory dnsEncName, ) = NameEncoder.dnsEncodeName("cien.bera");
+        (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName("cien.bera");
         console.log("dnsEncName");
         console.logBytes(dnsEncName);
         // resolve
@@ -193,6 +199,18 @@ contract FlowTest is BaseTest {
         assertEq(addr, address(0), "addr not set for forward resolution");
         assertEq(calledResolver_, address(resolver), "called BeraDefaultResolver");
         vm.stopPrank();
+    }
+
+    function test_UR_forwardResolution_returns_addr_if_setAddr_called() public prank(alice) {
+        bytes32 node = registerAndSetAddr(alice);
+        // dns encode name
+        (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName("cien.bera");
+        // resolve
+        (bytes memory res_, address calledResolver_) =
+            universalResolver.resolve(dnsEncName, abi.encodeWithSelector(IAddrResolver.addr.selector, node));
+        address addr = abi.decode(res_, (address));
+        assertEq(addr, address(alice), "addr is alice");
+        assertEq(calledResolver_, address(resolver), "called BeraDefaultResolver");
     }
 
     // function test_UR_reverseResolution_returns_0x00_if_setName_not_called() public {
@@ -213,36 +231,115 @@ contract FlowTest is BaseTest {
     //     vm.stopPrank();
     // }
 
-    function test_UR_reverseResolution_returns_addr_if_setName_called() public {
+    function test_UR_reverseResolution_returns_name_if_setName_called() public {
         vm.startPrank(alice);
         vm.deal(alice, 10 ether);
         // register
-        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord());
+        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(alice));
         // claim and set name
         reverseRegistrar.setName("cien.bera");
         // reverse node DNS encoded
         string memory normalizedAddr = normalizeAddress(alice);
         string memory reverseNode = string.concat(normalizedAddr, ".addr.reverse");
-        (bytes memory dnsEncName, ) = NameEncoder.dnsEncodeName(reverseNode);
-        (string memory resolvedName, address resolvedAddress, address reverseResolverAddress, address addrResolverAddress) =
-            universalResolver.reverse(dnsEncName);
+        (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName(reverseNode);
+        (
+            string memory resolvedName,
+            address resolvedAddress,
+            address reverseResolverAddress,
+            address addrResolverAddress
+        ) = universalResolver.reverse(dnsEncName);
         assertEq(resolvedName, "cien.bera", "reverse resolution success");
-        assertEq(resolvedAddress, address(0), "resolvedAddress is zero address because addr resolver is not set");
+        assertEq(resolvedAddress, address(0), "resolvedAddress is zero address because addr is not set");
         vm.stopPrank();
     }
 
-    // function test_UR_forwardResolution_success_with_subdomain_using_parent_resolver() public prank(alice) {
-    //     registerAndSetAddr();
+    function test_UR_forwardResolution_success_with_subdomain_using_parent_resolver() public prank(alice) {
+        bytes32 nameNode = registerAndSetAddr(alice);
+        // create subdomain
+        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(bob), address(0), DEFAULT_TTL);
+        // set addr for subdomain by bob
+        vm.startPrank(bob);
+        bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(bytes("sub"))));
+        resolver.setAddr(subnode, address(bob));
+        vm.stopPrank();
+        // dns encode name
+        (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName("sub.cien.bera");
+        // resolve
+        (bytes memory res_, address calledResolver_) =
+            universalResolver.resolve(dnsEncName, abi.encodeWithSelector(IAddrResolver.addr.selector, subnode));
+        address addr = abi.decode(res_, (address));
+        assertEq(addr, address(bob), "addr is bob");
+        assertEq(calledResolver_, address(resolver), "called BeraDefaultResolver");
+    }
 
-    // }
+    function test_UR_reverseResolution_success_with_subdomain_using_parent_resolver() public prank(alice) {
+        bytes32 nameNode = registerAndSetAddr(alice);
+        // create subdomain
+        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(bob), address(0), DEFAULT_TTL);
+        // set name for subdomain by bob
+        vm.startPrank(bob);
+        reverseRegistrar.setName("sub.cien.bera");
+        vm.stopPrank();
+        // reverse node DNS encoded
+        string memory normalizedAddr = normalizeAddress(bob);
+        string memory reverseNode = string.concat(normalizedAddr, ".addr.reverse");
+        (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName(reverseNode);
+        (
+            string memory resolvedName,
+            address resolvedAddress,
+            address reverseResolverAddress,
+            address addrResolverAddress
+        ) = universalResolver.reverse(dnsEncName);
+        assertEq(resolvedName, "sub.cien.bera", "reverse resolution success");
+        assertEq(
+            resolvedAddress, address(0), "resolvedAddress is the zero address because addr is not set for subdomain"
+        );
+        assertEq(addrResolverAddress, address(resolver), "addrResolverAddress is BeraDefaultResolver");
+        vm.stopPrank();
+    }
+
+    // SUBDOMAINS TESTS ---------------------------------------------------------------------------------------------------
+
+    function test_subdomain_is_not_erc721_compliant() public prank(alice) {
+        bytes32 nameNode = registerAndSetAddr(alice);
+        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(bob), address(0), DEFAULT_TTL);
+        uint256 tokenId = uint256(keccak256(bytes("sub")));
+        // base registrar is the ERC721 contract that is the owner of the .bera node
+        vm.expectRevert();
+        baseRegistrar.ownerOf(tokenId);
+    }
+
+    function test_node_owner_can_delete_subnode_and_then_recreate_it() public prank(alice) {
+        bytes32 nameNode = registerAndSetAddr(alice);
+        // NOTE: setting the subnode owner to bob
+        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(bob), address(0), DEFAULT_TTL);
+        // NOTE: alice should be able to delete the subnode
+        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(0), address(0), 0);
+        bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(bytes("sub"))));
+        // NOTE: setting the subnode owner to zero address acts as a "delete"
+        assertEq(registry.owner(subnode), address(0), "subnode owner is zero address");
+        // NOTE: alice should be able to recreate the subnode
+        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(chris), address(0), DEFAULT_TTL);
+        assertEq(registry.owner(subnode), address(chris), "subnode owner is now chris");
+    }
+
+    function test_node_owner_can_set_addr_for_subnode_if_node_owner_is_subnode_owner() public prank(alice) {
+        bytes32 nameNode = registerAndSetAddr(alice);
+        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(alice), address(0), DEFAULT_TTL);
+        bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(bytes("sub"))));
+        resolver.setAddr(subnode, address(chris));
+        assertEq(resolver.addr(subnode), address(chris), "addr is chris");
+    }
+
+    function test_node_owner_cannot_set_addr_for_subnode_if_node_owner_is_not_subnode_owner() public prank(alice) {
+        bytes32 nameNode = registerAndSetAddr(alice);
+        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(bob), address(0), DEFAULT_TTL);
+        bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(bytes("sub"))));
+        vm.expectRevert("Unauthorized");
+        resolver.setAddr(subnode, address(chris));
+    }
 
     // UTILITIES ----------------------------------------------------------------------------------------------------------
-
-    modifier prank(address account) {
-        vm.startPrank(account);
-        _;
-        vm.stopPrank();
-    }
 
     /// @notice Calculate the node for a given label and parent
     /// @param labelHash_ The label hash
@@ -275,18 +372,23 @@ contract FlowTest is BaseTest {
         return string(hexString);
     }
 
-    function registerAndSetAddr() internal {
-        vm.deal(alice, 10 ether);
-        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord());
-        bytes32 label = keccak256(bytes(name));
+    function registerAndSetAddr(address _owner) internal returns (bytes32) {
+        vm.deal(_owner, 10 ether);
+        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(_owner));
+        bytes32 label = keccak256(bytes("cien"));
         bytes32 subnode = _calculateNode(label, BERA_NODE);
-        resolver.setAddr(subnode, address(alice));
+        resolver.setAddr(subnode, _owner);
+        return subnode;
     }
 
-    function registerRequestWithNoReverseRecord() internal view returns (RegistrarController.RegisterRequest memory) {
+    function registerRequestWithNoReverseRecord(address _owner)
+        internal
+        view
+        returns (RegistrarController.RegisterRequest memory)
+    {
         return RegistrarController.RegisterRequest({
             name: "cien",
-            owner: alice,
+            owner: _owner,
             duration: 365 days,
             resolver: address(resolver),
             data: new bytes[](0),
