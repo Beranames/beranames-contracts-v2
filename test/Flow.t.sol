@@ -13,7 +13,9 @@ import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
+// interfaces
 import {IAddrResolver} from "src/resolver/interfaces/IAddrResolver.sol";
+import {ITextResolver} from "src/resolver/interfaces/ITextResolver.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 import {NameEncoder} from "src/resolver/libraries/NameEncoder.sol";
@@ -213,31 +215,13 @@ contract FlowTest is BaseTest {
         assertEq(calledResolver_, address(resolver), "called BeraDefaultResolver");
     }
 
-    // function test_UR_reverseResolution_returns_0x00_if_setName_not_called() public {
-    //     vm.startPrank(alice);
-    //     vm.deal(alice, 10 ether);
-    //     // register
-    //     registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord());
-    //     // reverse node DNS encoded
-    //     string memory normalizedAddr = normalizeAddress(alice);
-    //     string memory reverseNode = string.concat(normalizedAddr, ".addr.reverse");
-    //     (bytes memory dnsEncName, ) = NameEncoder.dnsEncodeName(reverseNode);
-    //     (string memory resolvedName, address resolvedAddress, address reverseResolverAddress, address addrResolverAddress) =
-    //         universalResolver.reverse(dnsEncName);
-    //     assertEq(resolvedName, "", "reverse resolution failed");
-    //     //assertEq(resolvedAddress, address(0), "resolvedAddress is 0");
-    //     //assertEq(reverseResolverAddress, address(0), "reverseResolverAddress is 0");
-    //     // assertEq(addrResolverAddress, address(0), "addrResolverAddress is 0");
-    //     vm.stopPrank();
-    // }
-
     function test_UR_reverseResolution_returns_name_if_setName_called() public {
         vm.startPrank(alice);
         vm.deal(alice, 10 ether);
         // register
         registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(alice));
         // claim and set name
-        reverseRegistrar.setName("cien.bera");
+        bytes32 reverseNode1 = reverseRegistrar.setName("cien.bera");
         // reverse node DNS encoded
         string memory normalizedAddr = normalizeAddress(alice);
         string memory reverseNode = string.concat(normalizedAddr, ".addr.reverse");
@@ -337,6 +321,88 @@ contract FlowTest is BaseTest {
         bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(bytes("sub"))));
         vm.expectRevert("Unauthorized");
         resolver.setAddr(subnode, address(chris));
+    }
+
+    // TEXT RECORDS TESTS ------------------------------------------------------------------------------------------------
+
+    function test_owner_can_set_text_record_success() public prank(alice) {
+        bytes32 nameNode = registerAndSetAddr(alice);
+        resolver.setText(nameNode, "com.discord", "_cien_");
+        assertEq(resolver.text(nameNode, "com.discord"), "_cien_", "text record set");
+    }
+
+    function test_owner_can_delete_text_record_success() public prank(alice) {
+        bytes32 nameNode = registerAndSetAddr(alice);
+        resolver.setText(nameNode, "com.discord", "_cien_");
+        resolver.setText(nameNode, "com.discord", "");
+        assertEq(resolver.text(nameNode, "com.discord"), "", "text record deleted");
+    }
+
+    function test_owner_can_clear_all_text_records_success() public prank(alice) {
+        bytes32 nameNode = registerAndSetAddr(alice);
+        // set two text records
+        resolver.setText(nameNode, "com.discord", "_cien_");
+        resolver.setText(nameNode, "com.twitter", "_cien_");
+        assertEq(resolver.text(nameNode, "com.discord"), "_cien_", "text record set");
+        assertEq(resolver.text(nameNode, "com.twitter"), "_cien_", "text record set");
+        // clear all text records
+        resolver.clearRecords(nameNode);
+        assertEq(resolver.text(nameNode, "com.discord"), "", "text record discord deleted");
+        assertEq(resolver.text(nameNode, "com.twitter"), "", "text record twitter deleted");
+        assertEq(resolver.addr(nameNode), address(0), "addr deleted");
+        // check record version
+        assertEq(resolver.recordVersions(nameNode), 1, "record version is 1");
+    }
+
+    function test_not_owner_cannot_set_text_record() public {
+        vm.startPrank(alice);
+        bytes32 nameNode = registerAndSetAddr(alice);
+        vm.stopPrank();
+        vm.startPrank(bob);
+        vm.expectRevert("Unauthorized");
+        resolver.setText(nameNode, "com.discord", "_cien_");
+        vm.stopPrank();
+    }
+
+    function test_UR_forwardResolution_returns_text_record_if_set() public prank(alice) {
+        bytes32 nameNode = registerAndSetAddr(alice);
+        resolver.setText(nameNode, "com.discord", "_cien_");
+        // dns encode name
+        (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName("cien.bera");
+        // resolve with UR
+        (bytes memory res_, address calledResolver_) =
+            universalResolver.resolve(dnsEncName, abi.encodeWithSelector(ITextResolver.text.selector, nameNode, "com.discord"));
+        string memory text = abi.decode(res_, (string));
+        assertEq(text, "_cien_", "text record set and resolved");
+        assertEq(calledResolver_, address(resolver), "called BeraDefaultResolver");
+    }
+
+    function test_UR_starting_from_reverseResolution_returns_text_record_if_set() public prank(alice) {
+        bytes32 nameNode = registerAndSetAddr(alice);
+        resolver.setText(nameNode, "com.discord", "_cien_");
+        // set name
+        bytes32 reverseNode1 = reverseRegistrar.setName("cien.bera");
+        console.log("reverseNode1");
+        console.logBytes32(reverseNode1);
+        // reverse node DNS encoded
+        string memory normalizedAddr = normalizeAddress(alice);
+        string memory reverseNode = string.concat(normalizedAddr, ".addr.reverse");
+        (bytes memory reverseDnsEncName,) = NameEncoder.dnsEncodeName(reverseNode);
+        (
+            string memory resolvedName,
+            address resolvedAddress,
+            address reverseResolverAddress,
+            address beraDefaultResolverAddress
+        ) = universalResolver.reverse(reverseDnsEncName);
+        assertEq(resolvedName, "cien.bera", "reverse resolution success");
+        assertEq(beraDefaultResolverAddress, address(resolver), "called BeraDefaultResolver");
+        // dns encode name
+        (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName(resolvedName);
+        // resolve from reverse resolution
+        (bytes memory res_, address calledResolver_) =
+            universalResolver.resolve(dnsEncName, abi.encodeWithSelector(ITextResolver.text.selector, nameNode, "com.discord"));
+        string memory text = abi.decode(res_, (string));
+        assertEq(text, "_cien_", "text record set and resolved");
     }
 
     // UTILITIES ----------------------------------------------------------------------------------------------------------
