@@ -370,8 +370,9 @@ contract FlowTest is BaseTest {
         // dns encode name
         (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName("cien.bera");
         // resolve with UR
-        (bytes memory res_, address calledResolver_) =
-            universalResolver.resolve(dnsEncName, abi.encodeWithSelector(ITextResolver.text.selector, nameNode, "com.discord"));
+        (bytes memory res_, address calledResolver_) = universalResolver.resolve(
+            dnsEncName, abi.encodeWithSelector(ITextResolver.text.selector, nameNode, "com.discord")
+        );
         string memory text = abi.decode(res_, (string));
         assertEq(text, "_cien_", "text record set and resolved");
         assertEq(calledResolver_, address(resolver), "called BeraDefaultResolver");
@@ -399,8 +400,9 @@ contract FlowTest is BaseTest {
         // dns encode name
         (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName(resolvedName);
         // resolve from reverse resolution
-        (bytes memory res_, address calledResolver_) =
-            universalResolver.resolve(dnsEncName, abi.encodeWithSelector(ITextResolver.text.selector, nameNode, "com.discord"));
+        (bytes memory res_, address calledResolver_) = universalResolver.resolve(
+            dnsEncName, abi.encodeWithSelector(ITextResolver.text.selector, nameNode, "com.discord")
+        );
         string memory text = abi.decode(res_, (string));
         assertEq(text, "_cien_", "text record set and resolved");
     }
