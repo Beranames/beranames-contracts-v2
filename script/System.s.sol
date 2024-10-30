@@ -13,6 +13,8 @@ import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
+import {bArtioPriceOracle} from "src/registrar/types/bArtioPriceOracle.sol";
+import {IPriceOracle} from "src/registrar/interfaces/IPriceOracle.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 
@@ -30,7 +32,7 @@ contract ContractScript is Script {
 
     ReservedRegistry public reservedRegistry;
     WhitelistValidator public whitelistValidator;
-    PriceOracle public priceOracle;
+    IPriceOracle public priceOracle;
 
     UniversalResolver public universalResolver;
 
@@ -83,9 +85,12 @@ contract ContractScript is Script {
 
         // Deploy layer 3 components: public registrar
         // Create the PriceOracle
-        address pythAddress = 0x2880aB155794e7179c9eE2e38200202908C17B43;
-        bytes32 beraUsdPythPriceFeedId = 0x40dd8c66a9582c51a1b03a41d6c68ee5c2c04c8b9c054e81d0f95602ffaefe2f;
-        priceOracle = new PriceOracle(pythAddress, beraUsdPythPriceFeedId);
+        // TODO: use pyth for mainnet
+        // address pythAddress = 0x2880aB155794e7179c9eE2e38200202908C17B43;
+        // bytes32 beraUsdPythPriceFeedId = 0x40dd8c66a9582c51a1b03a41d6c68ee5c2c04c8b9c054e81d0f95602ffaefe2f;
+        // priceOracle = new PriceOracle(pythAddress, beraUsdPythPriceFeedId);
+
+        priceOracle = new bArtioPriceOracle();
 
         // Create the WhitelistValidator
         whitelistValidator = new WhitelistValidator(address(registrarAdmin), address(signer));
