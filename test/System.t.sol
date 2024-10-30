@@ -269,7 +269,7 @@ contract SystemTest is BaseTest {
         // assertEq(resp_, abi.encode(alice), "resp_ should be alice"); //TODO: fix this
         assertEq(calledResolver_, address(resolver), "calledResolver_ should be resolver");
 
-        // hardcoded dnsEncode(alice.addr.reverse)
+        // hardcoded dnsEncode((alice's address without 0x prefix).addr.reverse)
         bytes memory dnsEncodedReverseName =
             hex"28353062646435336535383838353331383638643836613437343562303538386363353638333761300461646472077265766572736500";
         (string memory returnedName, address resolvedAddress, address reverseResolvedAddress, address resolverAddress) =
