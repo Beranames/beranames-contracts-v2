@@ -108,6 +108,7 @@ contract BeraAuctionHouseTest is SystemTest {
 
         // this triggers ERC721NonexistentToken
         // because auction token Id !== nft id
+        vm.prank(registrarAdmin);
         auctionHouse.settleAuction();
         vm.stopPrank();
 
