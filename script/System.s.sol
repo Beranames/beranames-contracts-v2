@@ -70,9 +70,8 @@ contract ContractScript is Script {
         registry.setOwner(REVERSE_NODE, address(registrarAdmin));
 
         // Create the resolver
-        resolver = new BeraDefaultResolver(
-            registry, address(baseRegistrar), address(reverseRegistrar), address(registrarAdmin)
-        );
+        resolver =
+            new BeraDefaultResolver(registry, address(baseRegistrar), address(reverseRegistrar), address(deployer));
 
         // Set the resolver for the base node
         registry.setResolver(bytes32(0), address(resolver));
@@ -107,6 +106,7 @@ contract ContractScript is Script {
             address(registrarAdmin)
         );
         baseRegistrar.addController(address(registrar));
+        resolver.setRegistrarController(address(registrar));
 
         // Deploy the Universal Resovler
         string[] memory urls = new string[](0);
@@ -124,7 +124,7 @@ contract ContractScript is Script {
         reverseRegistrar.setController(address(registrarAdmin), true);
         reverseRegistrar.setController(address(registrar), true);
         reverseRegistrar.transferOwnership(address(registrar));
-
+        resolver.transferOwnership(address(registrarAdmin));
         // Stop broadcast
         vm.stopBroadcast();
     }

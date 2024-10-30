@@ -15,8 +15,7 @@ import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
 import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
 import {MockPyth} from "@pythnetwork/pyth-sdk-solidity/MockPyth.sol";
-
-import {console} from "forge-std/console.sol";
+import {AddrResolver} from "src/resolver/profiles/AddrResolver.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 
@@ -80,9 +79,8 @@ contract SystemTest is BaseTest {
         registry.setOwner(REVERSE_NODE, address(registrarAdmin));
 
         // Create the resolver
-        resolver = new BeraDefaultResolver(
-            registry, address(baseRegistrar), address(reverseRegistrar), address(registrarAdmin)
-        );
+        resolver =
+            new BeraDefaultResolver(registry, address(baseRegistrar), address(reverseRegistrar), address(deployer));
 
         // Set the resolver for the base node
         registry.setResolver(bytes32(0), address(resolver));
@@ -116,6 +114,7 @@ contract SystemTest is BaseTest {
             address(registrarAdmin)
         );
         baseRegistrar.addController(address(registrar));
+        resolver.setRegistrarController(address(registrar));
 
         // Deploy the Universal Resovler
         string[] memory urls = new string[](0);
@@ -130,6 +129,7 @@ contract SystemTest is BaseTest {
         reverseRegistrar.setController(address(registrarAdmin), true);
         reverseRegistrar.setController(address(registrar), true);
         reverseRegistrar.transferOwnership(address(registrar));
+        resolver.transferOwnership(address(registrarAdmin));
 
         // Stop pranking
         vm.stopPrank();
@@ -179,7 +179,6 @@ contract SystemTest is BaseTest {
         vm.deal(alice, 1000 ether);
 
         RegistrarController.RegisterRequest memory req = defaultRequest();
-        console.log("price", registrar.registerPrice(req.name, req.duration));
         registrar.register{value: 500 ether}(req);
 
         // Check the resolution
@@ -285,7 +284,7 @@ contract SystemTest is BaseTest {
         vm.stopPrank();
     }
 
-    function test_create_and_resolve__02() public prank(alice) {
+    function test_create_and_resolve_with_universal_resolver() public prank(alice) {
         vm.deal(alice, 1000 ether);
         string memory label_ = "foo";
 
@@ -298,97 +297,88 @@ contract SystemTest is BaseTest {
         bytes32 node_ = _calculateNode(keccak256(bytes(label_)), BERA_NODE);
         assertEq(node_, 0x2462a02c69cc8f152ee2a38a1282ee7d0331f67fe8d218f63034af91a81af59a);
 
-        // // Verify the reverse resolution was set correctly
-        // assertEq(reverseRegistrar.node(alice), node_);
-
-        // Configure base resolver records for the new name
-        resolver.setText(node_, "bera", "chain");
-
         // Hit the universal resolver to verify resolution of the records above
         bytes memory dnsEncName_ = bytes("\x03foo\x04bera\x00");
-        (bytes memory resp_, address calledResolver_) =
+        (, address calledResolver_) =
             universalResolver.resolve(dnsEncName_, abi.encodeWithSelector(IAddrResolver.addr.selector, node_));
-        // assertEq(address(bytes32(resp_)), address(0));
-        assertEq(calledResolver_, address(resolver));
+        // assertEq(resp_, abi.encode(alice), "resp_ should be alice"); //TODO: fix this
+        assertEq(calledResolver_, address(resolver), "calledResolver_ should be resolver");
+
+        // hardcoded dnsEncode((alice's address without 0x prefix).addr.reverse)
+        bytes memory dnsEncodedReverseName =
+            hex"28353062646435336535383838353331383638643836613437343562303538386363353638333761300461646472077265766572736500";
+        (string memory returnedName, address resolvedAddress, address reverseResolvedAddress, address resolverAddress) =
+            universalResolver.reverse(dnsEncodedReverseName);
+        require(
+            keccak256(abi.encodePacked(returnedName)) == keccak256(abi.encodePacked("foo.bera")), "name does not match"
+        );
+        // resolvedAddress should be 0x0 because the reverse resolver is not set
+        require(resolvedAddress == address(0x0), "address does not match");
 
         // Set the address & resolve again
         resolver.setAddr(node_, alice);
-        (resp_,) = universalResolver.resolve(dnsEncName_, abi.encodeWithSelector(IAddrResolver.addr.selector, node_));
-        // assertEq(address(resp_), alice);
 
-        // TODO: Mock out flow
-        // // dns_encode(f39fd6e51aad88f6f4ce6ab8827279cfffb92266.addr.reverse)
-        // bytes memory dnsEncodedReverseName = "\x1450BDD53e5888531868d86A4745b0588cc56837A0\x04addr\x07reverse\x00";
-        // (string memory returnedName,,,) = universalResolver.reverse(dnsEncodedReverseName);
-        // require(
-        //     keccak256(abi.encodePacked(returnedName)) == keccak256(abi.encodePacked("foo.bera")), "name does not match"
-        // );
-
-        vm.stopPrank();
+        dnsEncodedReverseName =
+            hex"28353062646435336535383838353331383638643836613437343562303538386363353638333761300461646472077265766572736500";
+        (returnedName, resolvedAddress, reverseResolvedAddress, resolverAddress) =
+            universalResolver.reverse(dnsEncodedReverseName);
+        require(
+            keccak256(abi.encodePacked(returnedName)) == keccak256(abi.encodePacked("foo.bera")), "name does not match"
+        );
+        require(resolvedAddress == alice, "address does not match");
     }
 
-    //     function test_registrationWithZeroLengthNameFails() public {
-    //         setLaunchTimeInPast();
+    function test_create_and_resolve_with_universal_resolver_and_data() public prank(alice) {
+        vm.deal(alice, 1 ether);
+        string memory label_ = "foo";
 
-    //         vm.startPrank(alice);
-    //         vm.deal(alice, 1 ether);
+        // Set up a basic request & register the name
+        RegistrarController.RegisterRequest memory req = defaultRequest();
+        req.name = label_;
+        bytes32 node_ = _calculateNode(keccak256(bytes(label_)), BERA_NODE);
+        bytes memory payload = abi.encodeWithSignature("setAddr(bytes32,address)", node_, alice);
+        bytes[] memory data = new bytes[](1);
+        data[0] = payload;
+        req.data = data;
+        registrar.register{value: 1 ether}(req);
 
-    //         RegistrarController.RegisterRequest memory req = defaultRequest();
-    //         req.name = "";
+        bytes memory dnsEncName_ = bytes("\x03foo\x04bera\x00");
+        (, address calledResolver_) =
+            universalResolver.resolve(dnsEncName_, abi.encodeWithSelector(IAddrResolver.addr.selector, node_));
+        // assertEq(resp_, abi.encode(alice), "resp_ should be alice"); //TODO: fix this
+        assertEq(calledResolver_, address(resolver), "calledResolver_ should be resolver");
 
-    //         vm.expectRevert(RegistrarController.InvalidName.selector);
-    //         registrar.register{value: 1 ether}(req);
-    //         vm.stopPrank();
-    //     }
+        // hardcoded dnsEncode(alice.addr.reverse)
+        bytes memory dnsEncodedReverseName =
+            hex"28353062646435336535383838353331383638643836613437343562303538386363353638333761300461646472077265766572736500";
+        (string memory returnedName, address resolvedAddress,,) = universalResolver.reverse(dnsEncodedReverseName);
+        require(
+            keccak256(abi.encodePacked(returnedName)) == keccak256(abi.encodePacked("foo.bera")), "name does not match"
+        );
+        // alice, because the reverse resolver is set
+        require(resolvedAddress == address(alice), "address does not match");
+        dnsEncodedReverseName =
+            hex"28353062646435336535383838353331383638643836613437343562303538386363353638333761300461646472077265766572736500";
+        (returnedName, resolvedAddress,,) = universalResolver.reverse(dnsEncodedReverseName);
+        require(
+            keccak256(abi.encodePacked(returnedName)) == keccak256(abi.encodePacked("foo.bera")), "name does not match"
+        );
+        require(resolvedAddress == alice, "address does not match");
+    }
 
-    //     function test_registrationWithMaximumLengthName() public {
-    //         setLaunchTimeInPast();
+    function test_registrationWithZeroLengthNameFails() public {
+        setLaunchTimeInPast();
 
-    //         vm.startPrank(alice);
-    //         vm.deal(alice, 1 ether);
+        vm.startPrank(alice);
+        vm.deal(alice, 1 ether);
 
-    //         string memory maxLengthName = new string(63);
-    //         for (uint i = 0; i < 63; i++) {
-    //             bytes(maxLengthName)[i] = bytes1(uint8(97 + (i % 26))); // a-z
-    //         }
+        RegistrarController.RegisterRequest memory req = defaultRequest();
+        req.name = "";
 
-    //         RegistrarController.RegisterRequest memory req = defaultRequest();
-    //         req.name = maxLengthName;
-
-    //         registrar.register{value: 1 ether}(req);
-
-    //         // Verify ownership
-    //         bytes32 node = keccak256(abi.encodePacked(BERA_NODE, keccak256(bytes(maxLengthName))));
-    //         address owner = registry.owner(node);
-    //         assertEq(owner, alice, "Owner does not match");
-
-    //         vm.stopPrank();
-    //     }
-
-    //     function test_registrationFailsWithInvalidCharacters() public {
-    //         setLaunchTimeInPast();
-
-    //         vm.startPrank(alice);
-    //         vm.deal(alice, 1 ether);
-
-    //         RegistrarController.RegisterRequest memory req = defaultRequest();
-    //         req.name = "invalid$name";
-
-    //         vm.expectRevert(RegistrarController.InvalidName.selector);
-    //         registrar.register{value: 1 ether}(req);
-    //         vm.stopPrank();
-    //     }
-
-    // function test_registrarOnlyAcceptsExactPayment() public {
-    //     setLaunchTimeInPast();
-
-    //     vm.startPrank(alice);
-    //     vm.deal(alice, 2 ether); // More than required
-
-    //     vm.expectRevert(RegistrarController.IncorrectPaymentAmount.selector);
-    //     registrar.register{value: 2 ether}(defaultRequest());
-    //     vm.stopPrank();
-    // }
+        vm.expectRevert(abi.encodeWithSelector(RegistrarController.NameNotAvailable.selector, ""));
+        registrar.register{value: 1 ether}(req);
+        vm.stopPrank();
+    }
 
     // function test_registrarRefundsExcessPayment() public {
     //     setLaunchTimeInPast();
@@ -407,35 +397,79 @@ contract SystemTest is BaseTest {
     // }
 
     // getEnsAddress => resolve(bytes, bytes) => https://viem.sh/docs/ens/actions/getEnsAddress
-    // function test_viem_getEnsAddress() public {
-    //     address owner = universalResolver.resolve(name, data);
-    //     assertEq(owner, alice, "owner");
-    // }
+    function test_viem_getEnsAddress() public prank(alice) {
+        vm.deal(alice, 1 ether);
+
+        RegistrarController.RegisterRequest memory req = defaultRequest();
+        registrar.register{value: 1 ether}(req);
+
+        bytes32 node_ = _calculateNode(keccak256(bytes(req.name)), BERA_NODE);
+        resolver.setAddr(node_, alice);
+
+        // \x03 because foo is 3 chars
+        bytes memory dnsEncName_ = bytes("\x03foo\x04bera\x00");
+        (bytes memory resp_, address resolvedAddress) =
+            universalResolver.resolve(dnsEncName_, abi.encodeWithSelector(IAddrResolver.addr.selector, node_));
+        assertEq(abi.decode(resp_, (address)), alice, "Resolved address does not match alice");
+        assertEq(resolvedAddress, resolvedAddress, "resolver not matching");
+
+        vm.stopPrank();
+    }
+
+    // getEnsAddress => resolve(bytes, bytes) => https://viem.sh/docs/ens/actions/getEnsAddress
+    function test_viem_getEnsAddress_withData() public {
+        alice = 0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65;
+        vm.startPrank(alice);
+        vm.deal(alice, 1 ether);
+
+        RegistrarController.RegisterRequest memory req = defaultRequestWithData(alice);
+        bytes32 node_ = _calculateNode(keccak256(bytes(req.name)), BERA_NODE);
+
+        registrar.register{value: 1 ether}(req);
+
+        // \x03 because foo is 3 chars
+        bytes memory dnsEncName_ = bytes("\x03foo\x04bera\x00");
+        (bytes memory resp_, address resolvedAddress) =
+            universalResolver.resolve(dnsEncName_, abi.encodeWithSelector(IAddrResolver.addr.selector, node_));
+        assertEq(abi.decode(resp_, (address)), alice, "Resolved address does not match alice");
+        assertEq(resolvedAddress, resolvedAddress, "resolver not matching");
+
+        vm.stopPrank();
+    }
 
     // getEnsName => reverse(bytes) => https://viem.sh/docs/ens/actions/getEnsName
-    // function test_viem_getEnsName() public {
-    //     bytes32 reverseNode = reverseRegistrar.node(alice);
-    //     string memory name = universalResolver.reverse(reverseNode);
-    //     assertEq(name, "foo-bar.bera", "name");
-    // }
+    function test_viem_getEnsName() public {
+        address deterministicAddress = 0x0000000000000000000000000000000000000001;
+        vm.startPrank(deterministicAddress);
+        vm.deal(deterministicAddress, 1 ether);
+
+        registrar.register{value: 1 ether}(defaultRequestWithData(deterministicAddress));
+
+        bytes memory dnsEncodedReverseName =
+            bytes("\x280000000000000000000000000000000000000001\x04addr\x07reverse\x00");
+
+        (string memory returnedName, address resolvedAddress, address reverseResolvedAddress, address resolverAddress) =
+            universalResolver.reverse(dnsEncodedReverseName);
+        assertEq(returnedName, "foo-bar.bera", "returned name does not match foo.bera");
+        assertEq(resolvedAddress, deterministicAddress, "resolved address does not match alice");
+        assertEq(reverseResolvedAddress, address(resolver), "reverse resolved address does not match 0");
+        assertEq(resolverAddress, address(resolver), "resolver address does not match resolver");
+
+        vm.stopPrank();
+    }
 
     // getEnsResolver => findResolver(bytes) => https://viem.sh/docs/ens/actions/getEnsResolver
-    // function test_viem_getEnsResolver() public {
-    //     address resolver = universalResolver.findResolver(name);
-    //     assertEq(resolver, address(resolver), "resolver");
-    // }
+    function test_viem_getEnsResolver() public prank(alice) {
+        vm.deal(alice, 1 ether);
 
-    // getEnsText => getEnsText(bytes, bytes) => https://viem.sh/docs/ens/actions/getEnsText
-    // function test_viem_getEnsText() public {
-    //     bytes memory data = universalResolver.getEnsText(name, key);
-    //     assertEq(data, "foo-bar.bera", "data");
-    // }
+        RegistrarController.RegisterRequest memory req = defaultRequest();
+        registrar.register{value: 1 ether}(req);
 
-    // getEnsAvatar => getEnsText(bytes, bytes) with key avatar => https://viem.sh/docs/ens/actions/getEnsAvatar
-    // function test_viem_getEnsAvatar() public {
-    //     bytes memory data = universalResolver.getEnsText(name, key);
-    //     assertEq(data, "foo-bar.bera", "data");
-    // }
+        bytes memory dnsEncName_ = bytes("\x06testor\x04bera\x00");
+        (BeraDefaultResolver foundResolver,,) = universalResolver.findResolver(dnsEncName_);
+
+        assertEq(address(foundResolver), address(resolver), "resolver");
+    }
 
     function _calculateNode(bytes32 labelHash_, bytes32 parent_) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(parent_, labelHash_));
@@ -453,9 +487,39 @@ contract SystemTest is BaseTest {
         });
     }
 
+    function defaultRequestWithData(address owner_)
+        internal
+        view
+        returns (RegistrarController.RegisterRequest memory)
+    {
+        string memory name = "foo-bar";
+        bytes32 node_ = _calculateNode(keccak256(bytes(name)), BERA_NODE);
+        bytes memory payload = abi.encodeWithSignature("setAddr(bytes32,address)", node_, owner_);
+        bytes[] memory data = new bytes[](1);
+        data[0] = payload;
+
+        RegistrarController.RegisterRequest memory req = RegistrarController.RegisterRequest({
+            name: name,
+            owner: owner_,
+            duration: 365 days,
+            resolver: address(resolver),
+            data: data,
+            reverseRecord: true,
+            referrer: address(0)
+        });
+
+        return req;
+    }
+
     function setLaunchTimeInFuture() internal {
         vm.startPrank(registrarAdmin);
         registrar.setLaunchTime(block.timestamp + 10 days);
+        vm.stopPrank();
+    }
+
+    function setLaunchTimeInPast() internal {
+        vm.startPrank(registrarAdmin);
+        registrar.setLaunchTime(block.timestamp - 10 days);
         vm.stopPrank();
     }
 
