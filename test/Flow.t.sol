@@ -13,9 +13,11 @@ import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
+import {MockPyth} from "@pythnetwork/pyth-sdk-solidity/MockPyth.sol";
 // interfaces
 import {IAddrResolver} from "src/resolver/interfaces/IAddrResolver.sol";
 import {ITextResolver} from "src/resolver/interfaces/ITextResolver.sol";
+import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 import {NameEncoder} from "src/resolver/libraries/NameEncoder.sol";
@@ -38,6 +40,9 @@ contract FlowTest is BaseTest {
 
     // Universal Resolver
     UniversalResolver public universalResolver;
+
+    MockPyth pyth;
+    bytes32 BERA_USD_PYTH_PRICE_FEED_ID = bytes32(uint256(0x1));
 
     function setUp() public override {
         // Setup base test
@@ -74,8 +79,9 @@ contract FlowTest is BaseTest {
             bytes32(0), keccak256(abi.encodePacked("bera")), address(baseRegistrar), address(resolver), DEFAULT_TTL
         );
 
-        // priceOracle
-        priceOracle = new PriceOracle();
+        // Create the PriceOracle
+        pyth = new MockPyth(60, 1);
+        priceOracle = new PriceOracle(address(pyth), BERA_USD_PYTH_PRICE_FEED_ID);
 
         // whitelistValidator
         whitelistValidator = new WhitelistValidator(address(registrarAdmin), address(signer));
@@ -120,6 +126,9 @@ contract FlowTest is BaseTest {
 
         // need to warp to avoid timestamp issues
         vm.warp(100_0000_0000);
+
+        vm.prank(deployer);
+        setBeraPrice(1);
     }
 
     function test_setUp_success() public view {
@@ -136,9 +145,9 @@ contract FlowTest is BaseTest {
 
     function test_register_success() public {
         vm.startPrank(alice);
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 1000 ether);
         // register
-        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(alice));
+        registrarController.register{value: 500 ether}(registerRequestWithNoReverseRecord(alice));
         vm.stopPrank();
         // check name is registered
         assertEq(baseRegistrar.ownerOf(uint256(keccak256("cien"))), alice);
@@ -146,8 +155,8 @@ contract FlowTest is BaseTest {
 
     function test_register_name_is_erc721_compliant() public {
         vm.startPrank(alice);
-        vm.deal(alice, 10 ether);
-        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(alice));
+        vm.deal(alice, 1000 ether);
+        registrarController.register{value: 500 ether}(registerRequestWithNoReverseRecord(alice));
         uint256 tokenId = uint256(keccak256(bytes("cien")));
         assertEq(baseRegistrar.ownerOf(tokenId), alice);
         vm.stopPrank();
@@ -155,9 +164,9 @@ contract FlowTest is BaseTest {
 
     function test_forwardResolution_success() public {
         vm.startPrank(alice);
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 1000 ether);
         // register and set addr
-        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(alice));
+        registrarController.register{value: 500 ether}(registerRequestWithNoReverseRecord(alice));
         bytes32 label = keccak256(bytes("cien"));
         bytes32 subnode = _calculateNode(label, BERA_NODE);
         resolver.setAddr(subnode, address(alice));
@@ -168,9 +177,9 @@ contract FlowTest is BaseTest {
 
     function test_reverseResolution_success() public {
         vm.startPrank(alice);
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 1000 ether);
         // register and set addr
-        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(alice));
+        registrarController.register{value: 500 ether}(registerRequestWithNoReverseRecord(alice));
         // claim and set name
         bytes32 reverseNode = reverseRegistrar.setName("cien.bera");
         bytes32 nodeReverse = reverseRegistrar.node(alice);
@@ -184,9 +193,9 @@ contract FlowTest is BaseTest {
 
     function test_UR_forwardResolution_returns_0x00_if_setAddr_not_called() public {
         vm.startPrank(alice);
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 1000 ether);
         // register and set addr
-        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(alice));
+        registrarController.register{value: 500 ether}(registerRequestWithNoReverseRecord(alice));
         bytes32 node = _calculateNode(keccak256(bytes("cien")), BERA_NODE);
         // dns encode name
         (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName("cien.bera");
@@ -213,9 +222,9 @@ contract FlowTest is BaseTest {
 
     function test_UR_reverseResolution_returns_name_if_setName_called() public {
         vm.startPrank(alice);
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 1000 ether);
         // register
-        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(alice));
+        registrarController.register{value: 500 ether}(registerRequestWithNoReverseRecord(alice));
         // claim and set name
         reverseRegistrar.setName("cien.bera");
         // reverse node DNS encoded
@@ -422,8 +431,8 @@ contract FlowTest is BaseTest {
     }
 
     function registerAndSetAddr(address _owner) internal returns (bytes32) {
-        vm.deal(_owner, 10 ether);
-        registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(_owner));
+        vm.deal(_owner, 1000 ether);
+        registrarController.register{value: 500 ether}(registerRequestWithNoReverseRecord(_owner));
         bytes32 label = keccak256(bytes("cien"));
         bytes32 subnode = _calculateNode(label, BERA_NODE);
         resolver.setAddr(subnode, _owner);
@@ -444,5 +453,29 @@ contract FlowTest is BaseTest {
             reverseRecord: false,
             referrer: address(0)
         });
+    }
+
+    // BERA
+    // https://docs.pyth.network/price-feeds/create-your-first-pyth-app/evm/part-1
+    function createBeraUpdate(int64 beraPrice) private view returns (bytes[] memory) {
+        bytes[] memory updateData = new bytes[](1);
+        updateData[0] = pyth.createPriceFeedUpdateData(
+            BERA_USD_PYTH_PRICE_FEED_ID,
+            beraPrice * 100_000, // price
+            10 * 100_000, // confidence
+            -5, // exponent
+            beraPrice * 100_000, // emaPrice
+            10 * 100_000, // emaConfidence
+            uint64(block.timestamp), // publishTime
+            uint64(block.timestamp) // prevPublishTime
+        );
+
+        return updateData;
+    }
+
+    function setBeraPrice(int64 beraPrice) private {
+        bytes[] memory updateData = createBeraUpdate(beraPrice);
+        uint256 value = pyth.getUpdateFee(updateData);
+        pyth.updatePriceFeeds{value: value}(updateData);
     }
 }

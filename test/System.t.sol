@@ -329,7 +329,7 @@ contract SystemTest is BaseTest {
     }
 
     function test_create_and_resolve_with_universal_resolver_and_data() public prank(alice) {
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
         string memory label_ = "foo";
 
         // Set up a basic request & register the name
@@ -340,7 +340,7 @@ contract SystemTest is BaseTest {
         bytes[] memory data = new bytes[](1);
         data[0] = payload;
         req.data = data;
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         bytes memory dnsEncName_ = bytes("\x03foo\x04bera\x00");
         (, address calledResolver_) =
@@ -398,10 +398,10 @@ contract SystemTest is BaseTest {
 
     // getEnsAddress => resolve(bytes, bytes) => https://viem.sh/docs/ens/actions/getEnsAddress
     function test_viem_getEnsAddress() public prank(alice) {
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
 
         RegistrarController.RegisterRequest memory req = defaultRequest();
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         bytes32 node_ = _calculateNode(keccak256(bytes(req.name)), BERA_NODE);
         resolver.setAddr(node_, alice);
@@ -420,12 +420,12 @@ contract SystemTest is BaseTest {
     function test_viem_getEnsAddress_withData() public {
         alice = 0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65;
         vm.startPrank(alice);
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
 
         RegistrarController.RegisterRequest memory req = defaultRequestWithData(alice);
         bytes32 node_ = _calculateNode(keccak256(bytes(req.name)), BERA_NODE);
 
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         // \x03 because foo is 3 chars
         bytes memory dnsEncName_ = bytes("\x03foo\x04bera\x00");
@@ -441,9 +441,9 @@ contract SystemTest is BaseTest {
     function test_viem_getEnsName() public {
         address deterministicAddress = 0x0000000000000000000000000000000000000001;
         vm.startPrank(deterministicAddress);
-        vm.deal(deterministicAddress, 1 ether);
+        vm.deal(deterministicAddress, 1000 ether);
 
-        registrar.register{value: 1 ether}(defaultRequestWithData(deterministicAddress));
+        registrar.register{value: 500 ether}(defaultRequestWithData(deterministicAddress));
 
         bytes memory dnsEncodedReverseName =
             bytes("\x280000000000000000000000000000000000000001\x04addr\x07reverse\x00");
@@ -460,10 +460,10 @@ contract SystemTest is BaseTest {
 
     // getEnsResolver => findResolver(bytes) => https://viem.sh/docs/ens/actions/getEnsResolver
     function test_viem_getEnsResolver() public prank(alice) {
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
 
         RegistrarController.RegisterRequest memory req = defaultRequest();
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         bytes memory dnsEncName_ = bytes("\x06testor\x04bera\x00");
         (BeraDefaultResolver foundResolver,,) = universalResolver.findResolver(dnsEncName_);
