@@ -48,7 +48,7 @@ contract SystemTest is BaseTest {
     string public constant DEFAULT_NAME = "foo-bar";
     string public constant DEFAULT_NAME_WITH_BERA = "foo-bar.bera";
 
-    function setUp() public override {
+    function setUp() public virtual override {
         // Setup base test
         super.setUp();
 

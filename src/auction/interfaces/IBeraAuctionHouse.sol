@@ -41,6 +41,9 @@ interface IBeraAuctionHouse {
     /// @notice Thrown when the start ID is too large.
     error StartIdTooLarge(uint256 startId);
 
+    /// @notice Thrown when the token is not owned by the auction house.
+    error TokenNotOwnedByAuctionHouse(uint256 tokenId);
+
     struct Auction {
         uint256 tokenId;
         uint128 amount;
