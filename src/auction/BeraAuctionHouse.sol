@@ -86,7 +86,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
     /**
      * @notice Settle the current auction, mint a new name, and put it up for auction.
      */
-    function settleCurrentAndCreateNewAuction(string memory label_) external override whenNotPaused {
+    function settleCurrentAndCreateNewAuction(string memory label_) external override whenNotPaused onlyOwner {
         _settleAuction();
         _createAuction(label_);
     }
@@ -95,7 +95,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * @notice Settle the current auction.
      * @dev This function can only be called when the contract is paused.
      */
-    function settleAuction() external override whenPaused {
+    function settleAuction() external override whenPaused onlyOwner {
         _settleAuction();
     }
 
