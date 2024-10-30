@@ -54,7 +54,7 @@ contract SystemTest is BaseTest {
     MockPyth pyth;
     bytes32 BERA_USD_PYTH_PRICE_FEED_ID = bytes32(uint256(0x1));
 
-    function setUp() public override {
+    function setUp() public virtual override {
         // Setup base test
         super.setUp();
 

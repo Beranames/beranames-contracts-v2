@@ -22,7 +22,7 @@ contract RegistrarTest is SystemTest {
 
     function test_public_sale_mint__success() public {
         vm.startPrank(alice);
-        deal(address(alice), 10 ether);
+        deal(address(alice), 1000 ether);
 
         string memory nameToMint = unicode"alice🐻‍❄️";
         RegistrarController.RegisterRequest memory request = RegistrarController.RegisterRequest({
@@ -34,7 +34,7 @@ contract RegistrarTest is SystemTest {
             reverseRecord: true,
             referrer: address(0)
         });
-        registrar.register{value: 1 ether}(request);
+        registrar.register{value: 500 ether}(request);
 
         vm.stopPrank();
     }
@@ -47,7 +47,7 @@ contract RegistrarTest is SystemTest {
 
         // mint with success
         vm.startPrank(alice);
-        deal(address(alice), 10 ether);
+        deal(address(alice), 1000 ether);
 
         string memory nameToMint = unicode"alice🐻‍❄️-whitelisted";
         RegistrarController.RegisterRequest memory request = RegistrarController.RegisterRequest({
@@ -68,39 +68,39 @@ contract RegistrarTest is SystemTest {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, prefixedHash);
 
         bytes memory signature = abi.encodePacked(r, s, v);
-        registrar.whitelistRegister{value: 1 ether}(request, signature);
+        registrar.whitelistRegister{value: 500 ether}(request, signature);
     }
 
-    function test_register_twoChars_success() public prankWithBalance(alice, 1 ether) {
+    function test_register_twoChars_success() public prankWithBalance(alice, 1000 ether) {
         string memory name = "ab";
         RegistrarController.RegisterRequest memory req = defaultRequest(name, alice);
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         assertEq(baseRegistrar.ownerOf(uint256(keccak256(bytes(name)))), alice);
     }
 
-    function test_register_oneChar_success() public prankWithBalance(alice, 1 ether) {
+    function test_register_oneChar_success() public prankWithBalance(alice, 1000 ether) {
         string memory name = "a";
         RegistrarController.RegisterRequest memory req = defaultRequest(name, alice);
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         assertEq(baseRegistrar.ownerOf(uint256(keccak256(bytes(name)))), alice);
     }
 
-    function test_register_oneCharPlusEmoji_success() public prankWithBalance(alice, 1 ether) {
+    function test_register_oneCharPlusEmoji_success() public prankWithBalance(alice, 1000 ether) {
         string memory name = unicode"a💩";
         RegistrarController.RegisterRequest memory req = defaultRequest(name, alice);
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         assertEq(baseRegistrar.ownerOf(uint256(keccak256(bytes(name)))), alice);
     }
 
-    function test_register_oneEmoji_failure() public prankWithBalance(alice, 1 ether) {
+    function test_register_oneEmoji_failure() public prankWithBalance(alice, 1000 ether) {
         string memory name = unicode"💩";
         RegistrarController.RegisterRequest memory req = defaultRequest(name, alice);
 
         vm.expectRevert(abi.encodeWithSelector(RegistrarController.NameNotAvailable.selector, name));
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
     }
 
     function defaultRequest(string memory name_, address owner_)
