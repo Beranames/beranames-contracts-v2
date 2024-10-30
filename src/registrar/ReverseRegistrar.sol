@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.8.4;
 
-import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {BNS} from "src/registry/interfaces/BNS.sol";
 import {IReverseRegistrar} from "src/registrar/interfaces/IReverseRegistrar.sol";

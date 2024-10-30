@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.17 <0.9.0;
 
-import {ERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
-import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import {Address} from "lib/openzeppelin-contracts/contracts/utils/Address.sol";
+import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {BeraDefaultResolver} from "src/resolver/Resolver.sol";
 import {LowLevelCallUtils} from "src/resolver/libraries/LowLevelCallUtils.sol";

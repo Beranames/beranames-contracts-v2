@@ -19,9 +19,7 @@ import {ITextResolver} from "src/resolver/interfaces/ITextResolver.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 import {NameEncoder} from "src/resolver/libraries/NameEncoder.sol";
-import {IERC721Errors} from "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol";
-
-import {console} from "lib/forge-std/src/console.sol";
+import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 contract FlowTest is BaseTest {
     // Layer 1: Registry
@@ -192,8 +190,6 @@ contract FlowTest is BaseTest {
         bytes32 node = _calculateNode(keccak256(bytes("cien")), BERA_NODE);
         // dns encode name
         (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName("cien.bera");
-        console.log("dnsEncName");
-        console.logBytes(dnsEncName);
         // resolve
         (bytes memory res_, address calledResolver_) =
             universalResolver.resolve(dnsEncName, abi.encodeWithSelector(IAddrResolver.addr.selector, node));
@@ -221,17 +217,12 @@ contract FlowTest is BaseTest {
         // register
         registrarController.register{value: 1 ether}(registerRequestWithNoReverseRecord(alice));
         // claim and set name
-        bytes32 reverseNode1 = reverseRegistrar.setName("cien.bera");
+        reverseRegistrar.setName("cien.bera");
         // reverse node DNS encoded
         string memory normalizedAddr = normalizeAddress(alice);
         string memory reverseNode = string.concat(normalizedAddr, ".addr.reverse");
         (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName(reverseNode);
-        (
-            string memory resolvedName,
-            address resolvedAddress,
-            address reverseResolverAddress,
-            address addrResolverAddress
-        ) = universalResolver.reverse(dnsEncName);
+        (string memory resolvedName, address resolvedAddress,,) = universalResolver.reverse(dnsEncName);
         assertEq(resolvedName, "cien.bera", "reverse resolution success");
         assertEq(resolvedAddress, address(0), "resolvedAddress is zero address because addr is not set");
         vm.stopPrank();
@@ -268,12 +259,8 @@ contract FlowTest is BaseTest {
         string memory normalizedAddr = normalizeAddress(bob);
         string memory reverseNode = string.concat(normalizedAddr, ".addr.reverse");
         (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName(reverseNode);
-        (
-            string memory resolvedName,
-            address resolvedAddress,
-            address reverseResolverAddress,
-            address addrResolverAddress
-        ) = universalResolver.reverse(dnsEncName);
+        (string memory resolvedName, address resolvedAddress,, address addrResolverAddress) =
+            universalResolver.reverse(dnsEncName);
         assertEq(resolvedName, "sub.cien.bera", "reverse resolution success");
         assertEq(
             resolvedAddress, address(0), "resolvedAddress is the zero address because addr is not set for subdomain"
@@ -382,25 +369,19 @@ contract FlowTest is BaseTest {
         bytes32 nameNode = registerAndSetAddr(alice);
         resolver.setText(nameNode, "com.discord", "_cien_");
         // set name
-        bytes32 reverseNode1 = reverseRegistrar.setName("cien.bera");
-        console.log("reverseNode1");
-        console.logBytes32(reverseNode1);
+        reverseRegistrar.setName("cien.bera");
         // reverse node DNS encoded
         string memory normalizedAddr = normalizeAddress(alice);
         string memory reverseNode = string.concat(normalizedAddr, ".addr.reverse");
         (bytes memory reverseDnsEncName,) = NameEncoder.dnsEncodeName(reverseNode);
-        (
-            string memory resolvedName,
-            address resolvedAddress,
-            address reverseResolverAddress,
-            address beraDefaultResolverAddress
-        ) = universalResolver.reverse(reverseDnsEncName);
+        (string memory resolvedName,,, address beraDefaultResolverAddress) =
+            universalResolver.reverse(reverseDnsEncName);
         assertEq(resolvedName, "cien.bera", "reverse resolution success");
         assertEq(beraDefaultResolverAddress, address(resolver), "called BeraDefaultResolver");
         // dns encode name
         (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName(resolvedName);
         // resolve from reverse resolution
-        (bytes memory res_, address calledResolver_) = universalResolver.resolve(
+        (bytes memory res_,) = universalResolver.resolve(
             dnsEncName, abi.encodeWithSelector(ITextResolver.text.selector, nameNode, "com.discord")
         );
         string memory text = abi.decode(res_, (string));
