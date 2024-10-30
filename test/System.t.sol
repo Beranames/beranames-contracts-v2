@@ -53,6 +53,7 @@ contract SystemTest is BaseTest {
 
         // Prank deployer
         vm.startPrank(deployer);
+        vm.deal(deployer, 1000 ether);
 
         // Deploy layer 1 components: registry
         registry = new BeraNamesRegistry();
@@ -130,11 +131,13 @@ contract SystemTest is BaseTest {
         reverseRegistrar.setController(address(registrar), true);
         reverseRegistrar.transferOwnership(address(registrar));
 
-        setBeraPrice(1);
         // Stop pranking
         vm.stopPrank();
 
         vm.warp(100_0000_0000);
+
+        vm.prank(deployer);
+        setBeraPrice(1);
     }
 
     // BERA
@@ -143,11 +146,11 @@ contract SystemTest is BaseTest {
         bytes[] memory updateData = new bytes[](1);
         updateData[0] = pyth.createPriceFeedUpdateData(
             BERA_USD_PYTH_PRICE_FEED_ID,
-            beraPrice * 100000, // price
-            10 * 100000, // confidence
+            beraPrice * 100_000, // price
+            10 * 100_000, // confidence
             -5, // exponent
-            beraPrice * 100000, // emaPrice
-            10 * 100000, // emaConfidence
+            beraPrice * 100_000, // emaPrice
+            10 * 100_000, // emaConfidence
             uint64(block.timestamp), // publishTime
             uint64(block.timestamp) // prevPublishTime
         );
@@ -158,8 +161,6 @@ contract SystemTest is BaseTest {
     function setBeraPrice(int64 beraPrice) private {
         bytes[] memory updateData = createBeraUpdate(beraPrice);
         uint256 value = pyth.getUpdateFee(updateData);
-        // this triggers out of funds no idea why => TODO: fix
-        vm.deal(address(this), value * 2);
         pyth.updatePriceFeeds{value: value}(updateData);
     }
 
@@ -175,11 +176,11 @@ contract SystemTest is BaseTest {
 
     function test_basic_success_and_resolution() public {
         vm.startPrank(alice);
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
 
         RegistrarController.RegisterRequest memory req = defaultRequest();
         console.log("price", registrar.registerPrice(req.name, req.duration));
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         // Check the resolution
         bytes32 reverseNode = reverseRegistrar.node(alice);
@@ -196,16 +197,16 @@ contract SystemTest is BaseTest {
 
     function test_failure_name_not_available() public {
         vm.startPrank(alice);
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 1000 ether);
 
-        registrar.register{value: 1 ether}(defaultRequest());
+        registrar.register{value: 500 ether}(defaultRequest());
 
         bytes32 reverseNode = reverseRegistrar.node(alice);
         string memory name = resolver.name(reverseNode);
         assertEq(name, "foo-bar.bera", "name");
 
         vm.expectRevert(abi.encodeWithSelector(RegistrarController.NameNotAvailable.selector, "foo-bar"));
-        registrar.register{value: 1 ether}(defaultRequest());
+        registrar.register{value: 500 ether}(defaultRequest());
 
         bool available = registrar.available("foo-bar");
         assertFalse(available);
@@ -217,10 +218,10 @@ contract SystemTest is BaseTest {
         setLaunchTimeInFuture();
 
         vm.startPrank(alice);
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 1000 ether);
 
         vm.expectRevert(abi.encodeWithSelector(RegistrarController.PublicSaleNotLive.selector));
-        registrar.register{value: 1 ether}(defaultRequest());
+        registrar.register{value: 500 ether}(defaultRequest());
         vm.stopPrank();
     }
 
@@ -228,10 +229,10 @@ contract SystemTest is BaseTest {
         setLaunchTimeInFuture();
 
         vm.startPrank(alice);
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
 
         bytes memory signature = sign();
-        registrar.whitelistRegister{value: 1 ether}(defaultRequest(), signature);
+        registrar.whitelistRegister{value: 500 ether}(defaultRequest(), signature);
 
         // Check the resolution
         bytes32 reverseNode = reverseRegistrar.node(alice);
@@ -252,23 +253,23 @@ contract SystemTest is BaseTest {
         vm.stopPrank();
 
         vm.startPrank(alice);
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
 
         vm.expectRevert(RegistrarController.NameReserved.selector);
-        registrar.register{value: 1 ether}(defaultRequest());
+        registrar.register{value: 500 ether}(defaultRequest());
 
         vm.stopPrank();
     }
 
     function test_create_and_resolve() public prank(alice) {
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
 
         string memory label_ = "testor";
 
         // Set up a basic request & register the name
         RegistrarController.RegisterRequest memory req = defaultRequest();
         req.name = label_;
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         // Calculate the node for the minted name
         bytes32 node_ = _calculateNode(keccak256(bytes(label_)), BERA_NODE);
@@ -285,13 +286,13 @@ contract SystemTest is BaseTest {
     }
 
     function test_create_and_resolve__02() public prank(alice) {
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
         string memory label_ = "foo";
 
         // Set up a basic request & register the name
         RegistrarController.RegisterRequest memory req = defaultRequest();
         req.name = label_;
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         // Calculate the node for the minted name
         bytes32 node_ = _calculateNode(keccak256(bytes(label_)), BERA_NODE);

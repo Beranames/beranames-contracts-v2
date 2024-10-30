@@ -202,11 +202,11 @@ contract PriceOracleTest is Test {
         bytes[] memory updateData = new bytes[](1);
         updateData[0] = pyth.createPriceFeedUpdateData(
             BERA_USD_PYTH_PRICE_FEED_ID,
-            beraPrice * 100000, // price
-            10 * 100000, // confidence
+            beraPrice * 100_000, // price
+            10 * 100_000, // confidence
             -5, // exponent
-            beraPrice * 100000, // emaPrice
-            10 * 100000, // emaConfidence
+            beraPrice * 100_000, // emaPrice
+            10 * 100_000, // emaConfidence
             uint64(block.timestamp), // publishTime
             uint64(block.timestamp) // prevPublishTime
         );

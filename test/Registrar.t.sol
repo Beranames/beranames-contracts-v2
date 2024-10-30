@@ -9,7 +9,7 @@ import {Test} from "forge-std/Test.sol";
 contract RegistrarTest is SystemTest {
     function test_public_sale_mint__success() public {
         vm.startPrank(alice);
-        deal(address(alice), 10 ether);
+        deal(address(alice), 1000 ether);
 
         string memory nameToMint = unicode"alice🐻‍❄️";
         RegistrarController.RegisterRequest memory request = RegistrarController.RegisterRequest({
@@ -21,7 +21,7 @@ contract RegistrarTest is SystemTest {
             reverseRecord: true,
             referrer: address(0)
         });
-        registrar.register{value: 1 ether}(request);
+        registrar.register{value: 500 ether}(request);
 
         vm.stopPrank();
     }
@@ -34,7 +34,7 @@ contract RegistrarTest is SystemTest {
 
         // mint with success
         vm.startPrank(alice);
-        deal(address(alice), 10 ether);
+        deal(address(alice), 1000 ether);
 
         string memory nameToMint = unicode"alice🐻‍❄️-whitelisted";
         RegistrarController.RegisterRequest memory request = RegistrarController.RegisterRequest({
@@ -55,6 +55,6 @@ contract RegistrarTest is SystemTest {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, prefixedHash);
 
         bytes memory signature = abi.encodePacked(r, s, v);
-        registrar.whitelistRegister{value: 1 ether}(request, signature);
+        registrar.whitelistRegister{value: 500 ether}(request, signature);
     }
 }
