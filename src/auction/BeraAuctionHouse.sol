@@ -10,12 +10,12 @@
 // With modifications by Beranames.
 pragma solidity ^0.8.13;
 
-import {Pausable} from "lib/openzeppelin-contracts/contracts/utils/Pausable.sol";
-import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
-import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BaseRegistrar} from "src/registrar/types/BaseRegistrar.sol";
 
-import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IWETH} from "src/auction/interfaces/IWETH.sol";
 
 import {IBeraAuctionHouse} from "src/auction/interfaces/IBeraAuctionHouse.sol";

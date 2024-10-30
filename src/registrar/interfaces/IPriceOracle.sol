@@ -4,7 +4,7 @@ pragma solidity >=0.8.17 <0.9.0;
 interface IPriceOracle {
     /// @notice The payment method for registration.
     enum Payment {
-        ETH,
+        BERA,
         STABLE
     }
 
@@ -15,7 +15,7 @@ interface IPriceOracle {
     }
 
     /// @notice The price for a given label.
-    /// This assumes a default payment method of ETH.
+    /// This assumes a default payment method of BERA.
     /// @param label The label to query.
     /// @param expires The expiry of the label.
     /// @param duration The duration of the registration.

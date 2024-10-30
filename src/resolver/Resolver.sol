@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 // Admin Controller
-import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Bera Name Service
 import {BNS} from "src/registry/interfaces/BNS.sol";

@@ -1,66 +1,135 @@
-## Foundry
+# Beranames Name Service (BNS)
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Beranames Name Service (BNS) is a decentralized and secure naming service built on the Berachain blockchain 🐻⛓.
 
-Foundry consists of:
+This project is a fork of the Ethereum Name Service (ENS) protocol, designed to provide decentralized domain name registration and resolution on the 🐻⛓ blockchain. By leveraging the robust architecture of ENS, this fork introduces customized functionalities while maintaining compatibility with existing ENS standards.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## Specifications
 
-## Documentation
+The BNS system comprises three main parts:
 
-https://book.getfoundry.sh/
+- The BNS registry
+- Resolvers
+- Registrars
 
-## Usage
+The registry is a single contract that provides a mapping from any registered name to the resolver responsible for it, and permits the owner of a name to set the resolver address, and to create subdomains, potentially with different owners to the parent domain.
 
-### Build
+Resolvers are responsible for performing resource lookups for a name.
 
-```shell
-$ forge build
+Registrars are responsible for allocating domain names to users of the system, and are the only entities capable of updating the BNS Registry.
+
+## Registering a name
+
+You can easily register a name using the [Beranames Service Portal](https://beranames.com/).
+
+## Integrating BNS into your project
+
+### Forward Resolution
+
+You can integrate BNS into your project by following this two step resolution process:
+
+1. **Find the resolver**: Every resolution process starts by querying the BNS registry to get the resolver address for the name.
+
+```solidity
+   BNS.resolver(bytes32 node) view returns (address)
 ```
 
-### Test
+where `node` is the [**namehash**](https://eips.ethereum.org/EIPS/eip-137#namehash-algorithm) (as specified in EIP 137#namehash-algorithm) of the domain name.
 
-```shell
-$ forge test
+2. **Query the resolver**: Use the resolver to lookup the resource records associated with the name.
+
+```solidity
+   resolver.addr(bytes32 node) view returns (address)
 ```
 
-### Format
+#### Universal Resolver
 
-```shell
-$ forge fmt
+As you have seen above, the resolver is the one responsible for resolving the domain name to the desired data.
+The resolution though is a two step process, and as such, you can use the [**universal resolver**](https://docs.ens.domains/resolvers/universal#forward-resolution) to resolve the domain name to its address in a single rpc call. This is also the way most of the client libraries expect that a resolution should be done.
+
+```solidity
+   universalResolver.resolve(bytes calldata name, bytes calldata data) external view returns (bytes)
 ```
 
-### Gas Snapshots
+where:
 
-```shell
-$ forge snapshot
+- `name` is the dnsEncoded name to resolve.
+- `data` is the ABI-encoded call data for the resolution function required - for example, the ABI encoding of `addr(namehash(name))` when resolving the `addr` record.
+
+### Reverse Resolution
+
+Reverse resolution is the process of resolving an address to a domain name. [EIP-181](https://eips.ethereum.org/EIPS/eip-181) specifies a TLD, registrar, and resolver interface for reverse resolution.
+
+> Reverse BNS records are stored in the BNS hierarchy in the same fashion as regular records, under a reserved domain, `addr.reverse`. To generate the BNS name for a given account’s reverse records, convert the account to hexadecimal representation in lower-case, and append `addr.reverse`. For instance, the BNS registry’s address at `0x112234455c3a32fd11230c42e7bccd4a84e02010` has any reverse records stored at `112234455c3a32fd11230c42e7bccd4a84e02010.addr.reverse`.
+
+#### Reverse Registrar
+
+The owner of the `addr.reverse` domain is the reverse registrar that permits the caller to take ownership of the reverse record for their own address.
+In order to take ownership of the reverse record for their own address, the caller can call the `claim` function of the reverse registrar with the desired name.
+
+```solidity
+   reverseRegistrar.claim(address owner) public returns (bytes32 node)
 ```
 
-### Anvil
+where `owner` is the address to claim the reverse record for.
 
-```shell
-$ anvil
+Or the caller can claim the reverse record for any address by directly calling the `SetName` function of the reverse registrar.
+
+```solidity
+   reverseRegistrar.setName(string name) public returns (bytes32 node)
 ```
 
-### Deploy
+When called by account `x`, sets the resolver for the name `hex(x) + '.addr.reverse'` to a default resolver, and sets the name record on that name to the specified _name_. This method facilitates setting up simple reverse records for users in a single transaction.
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+#### Reverse Resolving
+
+Once the reverse record is claimed, the caller can use the resolver to lookup the name associated with the address.
+
+```solidity
+   resolver.name(bytes32 node) view returns (string)
 ```
 
-### Cast
+where `node` is the reverse record node obtained from the reverse registrar calling:
 
-```shell
-$ cast <subcommand>
+```solidity
+   reverseRegistrar.node(address owner) view returns (bytes32)
 ```
 
-### Help
+### Universal Resolver
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+As for the forward resolution, the universal resolver can be used to resolve the reverse record in a single rpc call.
+
+```solidity
+   universalResolver.reverse(bytes calldata name) external view returns (string, address, address, address)
 ```
+
+where `name` is the dnsEncoded name to resolve.
+
+**returns**: the resolved name, the resolved address, the reverse resolver address, and the resolver address.
+
+## Subdomains
+
+Subdomains are not ERC721 compliant. The base registrar is the ERC721 contract that is the owner of the `.bera` node.
+
+If you already own a `.bera` domain name you can create as many subdomains as you want at no additional cost.
+
+You can create subdomains by calling the `setSubnodeRecord` function of the BNS registry. This function takes the parent node and the label of the subdomain to create.
+
+```solidity
+   registry.setSubnodeRecord(bytes32 parentNode, bytes32 label, address owner, address resolver, uint64 ttl)
+```
+
+where:
+
+- `parentNode` is the node of the parent domain.
+- `label` is the keccak256 hash of the subdomain label to register.
+- `owner` is the address of the new owner of the subdomain.
+- `resolver` is the address of the resolver of the subdomain.
+- `ttl` is optional and if not provided the default ttl will be used.
+
+The subdomain will be registered under the parent node and the label provided. The subdomain will have its own resolver, and the owner of the subdomain will be able to update it at any time. If the resolver is not provided, the resolver of the parent node will be found during the resolution process provided that the **universal resolver** is used.
+
+In order to "delete" a subdomain, the owner of the subdomain can call the `setSubnodeRecord` function of the BNS registry with the same parent node, label, and setting the owner and the others record associated to the subdomain to the zero address.
+If more records than the resolver have been set for the subdomain, they will need to be explicity "deleted" by setting them to the zero address using the `set*` functions of the resolver.
+
+To reclaim and register the same subdomain again it will be sufficient to call the `setSubnodeRecord` function of the BNS registry with the same parent node and label.

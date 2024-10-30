@@ -75,9 +75,8 @@ contract ContractScript is Script {
         registry.setOwner(REVERSE_NODE, address(registrarAdmin));
 
         // Create the resolver
-        resolver = new BeraDefaultResolver(
-            registry, address(baseRegistrar), address(reverseRegistrar), address(registrarAdmin)
-        );
+        resolver =
+            new BeraDefaultResolver(registry, address(baseRegistrar), address(reverseRegistrar), address(deployer));
 
         // Set the resolver for the base node
         registry.setResolver(bytes32(0), address(resolver));
@@ -89,7 +88,9 @@ contract ContractScript is Script {
 
         // Deploy layer 3 components: public registrar
         // Create the PriceOracle
-        priceOracle = new PriceOracle();
+        address pythAddress = 0x2880aB155794e7179c9eE2e38200202908C17B43;
+        bytes32 beraUsdPythPriceFeedId = 0x40dd8c66a9582c51a1b03a41d6c68ee5c2c04c8b9c054e81d0f95602ffaefe2f;
+        priceOracle = new PriceOracle(pythAddress, beraUsdPythPriceFeedId);
 
         // Create the WhitelistValidator
         whitelistValidator = new WhitelistValidator(address(registrarAdmin), address(signer));
@@ -110,6 +111,7 @@ contract ContractScript is Script {
             address(registrarAdmin)
         );
         baseRegistrar.addController(address(registrar));
+        resolver.setRegistrarController(address(registrar));
 
         // Deploy the Universal Resovler
         string[] memory urls = new string[](0);
@@ -135,6 +137,7 @@ contract ContractScript is Script {
         reverseRegistrar.setController(address(registrarAdmin), true);
         reverseRegistrar.setController(address(registrar), true);
         reverseRegistrar.transferOwnership(address(registrar));
+        resolver.transferOwnership(address(registrarAdmin));
 
         mintToAuctionHouse();
 
