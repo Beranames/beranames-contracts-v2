@@ -134,7 +134,7 @@ contract SystemTest is BaseTest {
         // Stop pranking
         vm.stopPrank();
 
-        vm.warp(100_0000_0000);
+        vm.warp(10_000_000_000);
 
         vm.prank(deployer);
         setBeraPrice(1);
