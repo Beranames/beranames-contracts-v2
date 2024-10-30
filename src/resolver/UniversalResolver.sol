@@ -345,7 +345,7 @@ contract UniversalResolver is ERC165, Ownable {
     }
 
     function _hasExtendedResolver(address resolver) internal view returns (bool) {
-        try BeraDefaultResolver(resolver).supportsInterface{gas: 50000}(type(IExtendedResolver).interfaceId) returns (
+        try BeraDefaultResolver(resolver).supportsInterface{gas: 50_000}(type(IExtendedResolver).interfaceId) returns (
             bool supported
         ) {
             return supported;

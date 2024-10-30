@@ -13,6 +13,8 @@ import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
+import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
+import {MockPyth} from "@pythnetwork/pyth-sdk-solidity/MockPyth.sol";
 import {AddrResolver} from "src/resolver/profiles/AddrResolver.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
@@ -41,12 +43,16 @@ contract SystemTest is BaseTest {
 
     UniversalResolver public universalResolver;
 
+    MockPyth pyth;
+    bytes32 BERA_USD_PYTH_PRICE_FEED_ID = bytes32(uint256(0x1));
+
     function setUp() public override {
         // Setup base test
         super.setUp();
 
         // Prank deployer
         vm.startPrank(deployer);
+        vm.deal(deployer, 1000 ether);
 
         // Deploy layer 1 components: registry
         registry = new BeraNamesRegistry();
@@ -86,7 +92,8 @@ contract SystemTest is BaseTest {
 
         // Deploy layer 3 components: public registrar
         // Create the PriceOracle
-        priceOracle = new PriceOracle();
+        pyth = new MockPyth(60, 1);
+        priceOracle = new PriceOracle(address(pyth), BERA_USD_PYTH_PRICE_FEED_ID);
 
         // Create the WhitelistValidator
         whitelistValidator = new WhitelistValidator(address(registrarAdmin), address(signer));
@@ -127,7 +134,34 @@ contract SystemTest is BaseTest {
         // Stop pranking
         vm.stopPrank();
 
-        vm.warp(100_0000_0000);
+        vm.warp(10_000_000_000);
+
+        vm.prank(deployer);
+        setBeraPrice(1);
+    }
+
+    // BERA
+    // https://docs.pyth.network/price-feeds/create-your-first-pyth-app/evm/part-1
+    function createBeraUpdate(int64 beraPrice) private view returns (bytes[] memory) {
+        bytes[] memory updateData = new bytes[](1);
+        updateData[0] = pyth.createPriceFeedUpdateData(
+            BERA_USD_PYTH_PRICE_FEED_ID,
+            beraPrice * 100_000, // price
+            10 * 100_000, // confidence
+            -5, // exponent
+            beraPrice * 100_000, // emaPrice
+            10 * 100_000, // emaConfidence
+            uint64(block.timestamp), // publishTime
+            uint64(block.timestamp) // prevPublishTime
+        );
+
+        return updateData;
+    }
+
+    function setBeraPrice(int64 beraPrice) private {
+        bytes[] memory updateData = createBeraUpdate(beraPrice);
+        uint256 value = pyth.getUpdateFee(updateData);
+        pyth.updatePriceFeeds{value: value}(updateData);
     }
 
     function test_initialized() public view {
@@ -142,9 +176,10 @@ contract SystemTest is BaseTest {
 
     function test_basic_success_and_resolution() public {
         vm.startPrank(alice);
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
 
-        registrar.register{value: 1 ether}(defaultRequest());
+        RegistrarController.RegisterRequest memory req = defaultRequest();
+        registrar.register{value: 500 ether}(req);
 
         // Check the resolution
         bytes32 reverseNode = reverseRegistrar.node(alice);
@@ -161,16 +196,16 @@ contract SystemTest is BaseTest {
 
     function test_failure_name_not_available() public {
         vm.startPrank(alice);
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 1000 ether);
 
-        registrar.register{value: 1 ether}(defaultRequest());
+        registrar.register{value: 500 ether}(defaultRequest());
 
         bytes32 reverseNode = reverseRegistrar.node(alice);
         string memory name = resolver.name(reverseNode);
         assertEq(name, "foo-bar.bera", "name");
 
         vm.expectRevert(abi.encodeWithSelector(RegistrarController.NameNotAvailable.selector, "foo-bar"));
-        registrar.register{value: 1 ether}(defaultRequest());
+        registrar.register{value: 500 ether}(defaultRequest());
 
         bool available = registrar.available("foo-bar");
         assertFalse(available);
@@ -182,10 +217,10 @@ contract SystemTest is BaseTest {
         setLaunchTimeInFuture();
 
         vm.startPrank(alice);
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 1000 ether);
 
         vm.expectRevert(abi.encodeWithSelector(RegistrarController.PublicSaleNotLive.selector));
-        registrar.register{value: 1 ether}(defaultRequest());
+        registrar.register{value: 500 ether}(defaultRequest());
         vm.stopPrank();
     }
 
@@ -193,10 +228,10 @@ contract SystemTest is BaseTest {
         setLaunchTimeInFuture();
 
         vm.startPrank(alice);
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
 
         bytes memory signature = sign();
-        registrar.whitelistRegister{value: 1 ether}(defaultRequest(), signature);
+        registrar.whitelistRegister{value: 500 ether}(defaultRequest(), signature);
 
         // Check the resolution
         bytes32 reverseNode = reverseRegistrar.node(alice);
@@ -217,23 +252,23 @@ contract SystemTest is BaseTest {
         vm.stopPrank();
 
         vm.startPrank(alice);
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
 
         vm.expectRevert(RegistrarController.NameReserved.selector);
-        registrar.register{value: 1 ether}(defaultRequest());
+        registrar.register{value: 500 ether}(defaultRequest());
 
         vm.stopPrank();
     }
 
     function test_create_and_resolve() public prank(alice) {
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
 
         string memory label_ = "testor";
 
         // Set up a basic request & register the name
         RegistrarController.RegisterRequest memory req = defaultRequest();
         req.name = label_;
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         // Calculate the node for the minted name
         bytes32 node_ = _calculateNode(keccak256(bytes(label_)), BERA_NODE);
@@ -250,13 +285,13 @@ contract SystemTest is BaseTest {
     }
 
     function test_create_and_resolve_with_universal_resolver() public prank(alice) {
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
         string memory label_ = "foo";
 
         // Set up a basic request & register the name
         RegistrarController.RegisterRequest memory req = defaultRequest();
         req.name = label_;
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         // Calculate the node for the minted name
         bytes32 node_ = _calculateNode(keccak256(bytes(label_)), BERA_NODE);
@@ -294,7 +329,7 @@ contract SystemTest is BaseTest {
     }
 
     function test_create_and_resolve_with_universal_resolver_and_data() public prank(alice) {
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
         string memory label_ = "foo";
 
         // Set up a basic request & register the name
@@ -305,7 +340,7 @@ contract SystemTest is BaseTest {
         bytes[] memory data = new bytes[](1);
         data[0] = payload;
         req.data = data;
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         bytes memory dnsEncName_ = bytes("\x03foo\x04bera\x00");
         (, address calledResolver_) =
@@ -363,10 +398,10 @@ contract SystemTest is BaseTest {
 
     // getEnsAddress => resolve(bytes, bytes) => https://viem.sh/docs/ens/actions/getEnsAddress
     function test_viem_getEnsAddress() public prank(alice) {
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
 
         RegistrarController.RegisterRequest memory req = defaultRequest();
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         bytes32 node_ = _calculateNode(keccak256(bytes(req.name)), BERA_NODE);
         resolver.setAddr(node_, alice);
@@ -385,12 +420,12 @@ contract SystemTest is BaseTest {
     function test_viem_getEnsAddress_withData() public {
         alice = 0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65;
         vm.startPrank(alice);
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
 
         RegistrarController.RegisterRequest memory req = defaultRequestWithData(alice);
         bytes32 node_ = _calculateNode(keccak256(bytes(req.name)), BERA_NODE);
 
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         // \x03 because foo is 3 chars
         bytes memory dnsEncName_ = bytes("\x03foo\x04bera\x00");
@@ -406,9 +441,9 @@ contract SystemTest is BaseTest {
     function test_viem_getEnsName() public {
         address deterministicAddress = 0x0000000000000000000000000000000000000001;
         vm.startPrank(deterministicAddress);
-        vm.deal(deterministicAddress, 1 ether);
+        vm.deal(deterministicAddress, 1000 ether);
 
-        registrar.register{value: 1 ether}(defaultRequestWithData(deterministicAddress));
+        registrar.register{value: 500 ether}(defaultRequestWithData(deterministicAddress));
 
         bytes memory dnsEncodedReverseName =
             bytes("\x280000000000000000000000000000000000000001\x04addr\x07reverse\x00");
@@ -425,10 +460,10 @@ contract SystemTest is BaseTest {
 
     // getEnsResolver => findResolver(bytes) => https://viem.sh/docs/ens/actions/getEnsResolver
     function test_viem_getEnsResolver() public prank(alice) {
-        vm.deal(alice, 1 ether);
+        vm.deal(alice, 1000 ether);
 
         RegistrarController.RegisterRequest memory req = defaultRequest();
-        registrar.register{value: 1 ether}(req);
+        registrar.register{value: 500 ether}(req);
 
         bytes memory dnsEncName_ = bytes("\x06testor\x04bera\x00");
         (BeraDefaultResolver foundResolver,,) = universalResolver.findResolver(dnsEncName_);
