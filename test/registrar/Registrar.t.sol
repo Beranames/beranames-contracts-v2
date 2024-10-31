@@ -45,10 +45,6 @@ contract RegistrarTest is SystemTest {
         registrar.setLaunchTime(block.timestamp + 10 days);
         vm.stopPrank();
 
-        // mint with success
-        vm.startPrank(alice);
-        deal(address(alice), 1000 ether);
-
         string memory nameToMint = unicode"alice🐻‍❄️-whitelisted";
         RegistrarController.RegisterRequest memory request = RegistrarController.RegisterRequest({
             name: nameToMint,
@@ -68,6 +64,14 @@ contract RegistrarTest is SystemTest {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, prefixedHash);
 
         bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.prank(address(whitelistValidator));
+        registrar.addValidSignature(keccak256(signature));
+
+        // mint with success
+        vm.startPrank(alice);
+        deal(address(alice), 1000 ether);
+
         registrar.whitelistRegister{value: 500 ether}(request, signature);
     }
 
@@ -101,6 +105,42 @@ contract RegistrarTest is SystemTest {
 
         vm.expectRevert(abi.encodeWithSelector(RegistrarController.NameNotAvailable.selector, name));
         registrar.register{value: 500 ether}(req);
+    }
+
+    function test_whitelist_mint__failure_invalid_signature() public {
+        // set launch time in 10 days
+        vm.prank(registrarAdmin);
+        registrar.setLaunchTime(block.timestamp + 10 days);
+        vm.stopPrank();
+
+        string memory nameToMint = unicode"alice🐻‍❄️-whitelisted";
+        RegistrarController.RegisterRequest memory request = RegistrarController.RegisterRequest({
+            name: nameToMint,
+            owner: alice,
+            duration: 365 days,
+            resolver: address(resolver),
+            data: new bytes[](0),
+            reverseRecord: true,
+            referrer: address(0)
+        });
+
+        bytes memory payload = abi.encode(request.owner, request.referrer, request.duration, request.name);
+        bytes32 payloadHash = keccak256(payload);
+        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
+        bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, payloadHash));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, prefixedHash);
+
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // signature is valid, but not in the validSignatures pool
+
+        // mint reverts with InvalidSignature error
+        vm.startPrank(alice);
+        deal(address(alice), 1000 ether);
+
+        vm.expectRevert(RegistrarController.InvalidSignature.selector);
+        registrar.whitelistRegister{value: 500 ether}(request, signature);
     }
 
     function defaultRequest(string memory name_, address owner_)

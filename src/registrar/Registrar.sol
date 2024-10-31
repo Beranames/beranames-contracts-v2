@@ -48,6 +48,9 @@ contract RegistrarController is Ownable {
     /// @notice Thrown when a signature has already been used.
     error SignatureAlreadyUsed();
 
+    /// @notice Thrown when a signature is invalid.
+    error InvalidSignature();
+
     /// @notice Thrown when a refund transfer is unsuccessful.
     error TransferFailed();
 
@@ -56,6 +59,9 @@ contract RegistrarController is Ownable {
 
     /// @notice Thrown when a reverse record is being set for another address.
     error CantSetReverseRecordForOthers();
+
+    /// @notice Thrown when a caller is not authorized to perform an action.
+    error NotAuthorized();
 
     /// Events -----------------------------------------------------------
 
@@ -149,6 +155,9 @@ contract RegistrarController is Ownable {
     /// @notice The mapping of used signatures.
     mapping(bytes32 => bool) public usedSignatures;
 
+    /// @notice The pool of valid signatures
+    mapping(bytes32 => bool) public validSignatures;
+
     /// @notice The timestamp of "go-live". Used for setting at-launch pricing premium.
     uint256 public launchTime;
 
@@ -186,6 +195,11 @@ contract RegistrarController is Ownable {
     /// @notice Decorator for validating that the public sale is live.
     modifier publicSaleLive() {
         if (block.timestamp < launchTime) revert PublicSaleNotLive();
+        _;
+    }
+
+    modifier onlyWhitelistValidator() {
+        if (msg.sender != address(whitelistValidator)) revert NotAuthorized();
         _;
     }
 
@@ -402,6 +416,7 @@ contract RegistrarController is Ownable {
         bytes memory payload = abi.encode(request.owner, request.referrer, request.duration, request.name);
 
         if (usedSignatures[keccak256(payload)]) revert SignatureAlreadyUsed();
+        if (!validSignatures[keccak256(signature)]) revert InvalidSignature();
 
         // Validate signature
         whitelistValidator.validateSignature(payload, v, r, s);
@@ -486,5 +501,13 @@ contract RegistrarController is Ownable {
     /// @notice Allows the owner to recover ERC20 tokens sent to the contract by mistake.
     function recoverFunds(address _token, address _to, uint256 _amount) external onlyOwner {
         IERC20(_token).safeTransfer(_to, _amount);
+    }
+
+    function addValidSignature(bytes32 signature) external onlyWhitelistValidator {
+        validSignatures[signature] = true;
+    }
+
+    function removeValidSignature(bytes32 signature) external onlyWhitelistValidator {
+        delete validSignatures[signature];
     }
 }

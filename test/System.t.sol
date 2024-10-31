@@ -243,10 +243,13 @@ contract SystemTest is BaseTest {
     function test_whitelisted_basic_success_and_resolution() public {
         setLaunchTimeInFuture();
 
+        bytes memory signature = sign();
+        vm.prank(address(whitelistValidator));
+        registrar.addValidSignature(keccak256(signature));
+
         vm.startPrank(alice);
         vm.deal(alice, 1000 ether);
 
-        bytes memory signature = sign();
         registrar.whitelistRegister{value: 500 ether}(defaultRequest(), signature);
 
         // Check the resolution
