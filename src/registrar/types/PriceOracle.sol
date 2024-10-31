@@ -4,7 +4,7 @@ pragma solidity >=0.8.17 <0.9.0;
 import {IPriceOracle} from "src/registrar/interfaces/IPriceOracle.sol";
 import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
 import {PythStructs} from "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
-import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {StringUtils} from "src/utils/StringUtils.sol";
 import {console} from "forge-std/console.sol";

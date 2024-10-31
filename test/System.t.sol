@@ -13,6 +13,9 @@ import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
+import {BeraAuctionHouse} from "src/auction/BeraAuctionHouse.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IWETH} from "src/auction/interfaces/IWETH.sol";
 import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
 import {MockPyth} from "@pythnetwork/pyth-sdk-solidity/MockPyth.sol";
 import {AddrResolver} from "src/resolver/profiles/AddrResolver.sol";
@@ -43,10 +46,15 @@ contract SystemTest is BaseTest {
 
     UniversalResolver public universalResolver;
 
+    BeraAuctionHouse public auctionHouse;
+
+    string public constant DEFAULT_NAME = "foo-bar";
+    string public constant DEFAULT_NAME_WITH_BERA = "foo-bar.bera";
+
     MockPyth pyth;
     bytes32 BERA_USD_PYTH_PRICE_FEED_ID = bytes32(uint256(0x1));
 
-    function setUp() public override {
+    function setUp() public virtual override {
         // Setup base test
         super.setUp();
 
@@ -120,6 +128,13 @@ contract SystemTest is BaseTest {
         string[] memory urls = new string[](0);
         universalResolver = new UniversalResolver(address(registry), urls);
 
+        // Deploy the auction house
+        auctionHouse = new BeraAuctionHouse(
+            baseRegistrar, resolver, IERC20(honey), IWETH(weth), 1 days, 365 days, 1 ether, 10 seconds, 1
+        );
+        auctionHouse.transferOwnership(address(registrarAdmin));
+        baseRegistrar.addController(address(auctionHouse));
+
         // Transfer ownership to registrar admin
         // root node
         registry.setOwner(bytes32(0), address(registrarAdmin));
@@ -172,6 +187,7 @@ contract SystemTest is BaseTest {
         assertEq(baseRegistrar.owner(), address(registrarAdmin), "baseRegistrar owner");
         assertEq(reverseRegistrar.owner(), address(registrar), "reverseRegistrar owner");
         assertEq(address(resolver.owner()), address(registrarAdmin), "resolver owner");
+        assertEq(address(auctionHouse.owner()), address(registrarAdmin), "auctionHouse owner");
     }
 
     function test_basic_success_and_resolution() public {
@@ -184,7 +200,7 @@ contract SystemTest is BaseTest {
         // Check the resolution
         bytes32 reverseNode = reverseRegistrar.node(alice);
         string memory name = resolver.name(reverseNode);
-        assertEq(name, "foo-bar.bera", "name");
+        assertEq(name, DEFAULT_NAME_WITH_BERA, "name");
 
         // Check the reverse resolution
         bytes32 namehash = 0xdbe044f099cc5aeee236290aa7508bcb847d304cd112a364d9c4b0b6e8b80dc7; // namehash('foo-bar.bera')
@@ -202,12 +218,12 @@ contract SystemTest is BaseTest {
 
         bytes32 reverseNode = reverseRegistrar.node(alice);
         string memory name = resolver.name(reverseNode);
-        assertEq(name, "foo-bar.bera", "name");
+        assertEq(name, DEFAULT_NAME_WITH_BERA, "name");
 
-        vm.expectRevert(abi.encodeWithSelector(RegistrarController.NameNotAvailable.selector, "foo-bar"));
+        vm.expectRevert(abi.encodeWithSelector(RegistrarController.NameNotAvailable.selector, DEFAULT_NAME));
         registrar.register{value: 500 ether}(defaultRequest());
 
-        bool available = registrar.available("foo-bar");
+        bool available = registrar.available(DEFAULT_NAME);
         assertFalse(available);
 
         vm.stopPrank();
@@ -236,7 +252,7 @@ contract SystemTest is BaseTest {
         // Check the resolution
         bytes32 reverseNode = reverseRegistrar.node(alice);
         string memory name = resolver.name(reverseNode);
-        assertEq(name, "foo-bar.bera", "name");
+        assertEq(name, DEFAULT_NAME_WITH_BERA, "name");
 
         // Check the reverse resolution
         bytes32 namehash = 0xdbe044f099cc5aeee236290aa7508bcb847d304cd112a364d9c4b0b6e8b80dc7; // namehash('foo-bar.bera')
@@ -248,7 +264,7 @@ contract SystemTest is BaseTest {
 
     function test_reserved_failure() public {
         vm.startPrank(deployer);
-        reservedRegistry.setReservedName("foo-bar");
+        reservedRegistry.setReservedName(DEFAULT_NAME);
         vm.stopPrank();
 
         vm.startPrank(alice);
@@ -477,7 +493,7 @@ contract SystemTest is BaseTest {
 
     function defaultRequest() internal view returns (RegistrarController.RegisterRequest memory) {
         return RegistrarController.RegisterRequest({
-            name: "foo-bar",
+            name: DEFAULT_NAME,
             owner: alice,
             duration: 365 days,
             resolver: address(resolver),
@@ -524,7 +540,7 @@ contract SystemTest is BaseTest {
     }
 
     function sign() internal view returns (bytes memory) {
-        bytes memory payload = abi.encode(alice, address(0), 365 days, "foo-bar");
+        bytes memory payload = abi.encode(alice, address(0), 365 days, DEFAULT_NAME);
         bytes32 hash =
             keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", abi.encodePacked(keccak256(payload))));
 

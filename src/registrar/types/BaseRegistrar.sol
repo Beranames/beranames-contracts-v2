@@ -230,12 +230,12 @@ contract BaseRegistrar is ERC721, Ownable {
         live
         onlyController
         onlyAvailable(id)
-        returns (uint256, uint256)
+        returns (uint256)
     {
         uint256 expiry = _localRegister(id, owner, duration);
         registry.setSubnodeRecord(baseNode, bytes32(id), owner, resolver, ttl);
         emit NameRegisteredWithRecord(id, owner, expiry, resolver, ttl);
-        return (uint256(keccak256(abi.encodePacked(baseNode, bytes32(id)))), expiry);
+        return expiry;
     }
 
     /// @notice Gets the owner of the specified token ID.

@@ -158,7 +158,7 @@ contract RegistrarController is Ownable {
     uint256 public constant MIN_REGISTRATION_DURATION = 365 days;
 
     /// @notice The minimum name length.
-    uint256 public constant MIN_NAME_LENGTH = 2;
+    uint256 public constant MIN_NAME_LENGTH = 1;
 
     /// Modifiers --------------------------------------------------------
 
@@ -434,7 +434,7 @@ contract RegistrarController is Ownable {
     ///
     /// @param request The `RegisterRequest` struct containing the details for the registration.
     function _registerRequest(RegisterRequest calldata request) internal {
-        (, uint256 expires) = base.registerWithRecord(
+        uint256 expires = base.registerWithRecord(
             uint256(keccak256(bytes(request.name))), request.owner, request.duration, request.resolver, 0
         );
 

@@ -13,6 +13,9 @@ import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
+import {BeraAuctionHouse} from "src/auction/BeraAuctionHouse.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IWETH} from "src/auction/interfaces/IWETH.sol";
 import {bArtioPriceOracle} from "src/registrar/types/bArtioPriceOracle.sol";
 import {IPriceOracle} from "src/registrar/interfaces/IPriceOracle.sol";
 
@@ -35,6 +38,8 @@ contract ContractScript is Script {
     IPriceOracle public priceOracle;
 
     UniversalResolver public universalResolver;
+
+    BeraAuctionHouse public auctionHouse;
 
     // Addresses
     // TODO: Update these with the correct addresses
@@ -117,6 +122,14 @@ contract ContractScript is Script {
         string[] memory urls = new string[](0);
         universalResolver = new UniversalResolver(address(registry), urls);
 
+        // Deploy the auction house
+        // TODO: update honey and weth addresses
+        auctionHouse = new BeraAuctionHouse(
+            baseRegistrar, resolver, IERC20(address(0)), IWETH(address(0)), 1 days, 365 days, 1 ether, 10 seconds, 1
+        );
+        auctionHouse.transferOwnership(address(registrarAdmin));
+        baseRegistrar.addController(address(auctionHouse));
+
         // TODO: Add test domains / initial mints here
 
         // Transfer ownership to registrar admin
@@ -130,7 +143,24 @@ contract ContractScript is Script {
         reverseRegistrar.setController(address(registrar), true);
         reverseRegistrar.transferOwnership(address(registrar));
         resolver.transferOwnership(address(registrarAdmin));
+
+        mintToAuctionHouse();
+
         // Stop broadcast
         vm.stopBroadcast();
+    }
+
+    function mintToAuctionHouse() internal {
+        baseRegistrar.addController(deployer);
+
+        string[3] memory emojis = [unicode"💩", unicode"🐻", unicode"🚀"]; // TODO: Add all the emojis
+        uint256 id;
+
+        for (uint256 i = 0; i < emojis.length; i++) {
+            id = uint256(keccak256(bytes(emojis[i])));
+            baseRegistrar.registerWithRecord(id, address(auctionHouse), 365 days, address(resolver), 0);
+        }
+
+        baseRegistrar.removeController(deployer);
     }
 }

@@ -18,7 +18,7 @@ import {BaseRegistrar} from "src/registrar/types/BaseRegistrar.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IWETH} from "src/auction/interfaces/IWETH.sol";
 
-import {IBeraAuctionHouse} from "src/auction/interfaces/IBeraAcutionHouse.sol";
+import {IBeraAuctionHouse} from "src/auction/interfaces/IBeraAuctionHouse.sol";
 
 import {BeraDefaultResolver} from "src/resolver/Resolver.sol";
 
@@ -86,7 +86,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
     /**
      * @notice Settle the current auction, mint a new name, and put it up for auction.
      */
-    function settleCurrentAndCreateNewAuction(string memory label_) external override whenNotPaused {
+    function settleCurrentAndCreateNewAuction(string memory label_) external override whenNotPaused onlyOwner {
         _settleAuction();
         _createAuction(label_);
     }
@@ -95,7 +95,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * @notice Settle the current auction.
      * @dev This function can only be called when the contract is paused.
      */
-    function settleAuction() external override whenPaused {
+    function settleAuction() external override whenPaused onlyOwner {
         _settleAuction();
     }
 
@@ -109,14 +109,21 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         (uint192 _reservePrice, uint56 _timeBuffer, uint8 _minBidIncrementPercentage) =
             (reservePrice, timeBuffer, minBidIncrementPercentage);
 
-        require(_auction.tokenId == tokenId, "tokenId not up for auction");
-        require(block.timestamp < _auction.endTime, "Auction expired");
-        require(msg.value >= _reservePrice, "Must send at least reservePrice");
-        require(
-            msg.value >= _auction.amount + ((_auction.amount * _minBidIncrementPercentage) / 100),
-            "Must send more than last bid by minBidIncrementPercentage amount"
-        );
+        if (_auction.tokenId != tokenId) {
+            revert TokenNotForUpAuction(tokenId);
+        }
 
+        if (block.timestamp >= _auction.endTime) {
+            revert AuctionExpired();
+        }
+
+        if (msg.value < _reservePrice) {
+            revert MustSendAtLeastReservePrice();
+        }
+
+        if (msg.value < _auction.amount + ((_auction.amount * _minBidIncrementPercentage) / 100)) {
+            revert MustSendMoreThanLastBidByMinBidIncrementPercentageAmount();
+        }
         auctionStorage.amount = uint128(msg.value);
         auctionStorage.bidder = payable(msg.sender);
 
@@ -180,7 +187,9 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * @dev Only callable by the owner.
      */
     function setTimeBuffer(uint56 _timeBuffer) external override onlyOwner {
-        require(_timeBuffer <= MAX_TIME_BUFFER, "timeBuffer too large");
+        if (_timeBuffer > MAX_TIME_BUFFER) {
+            revert TimeBufferTooLarge(_timeBuffer);
+        }
 
         timeBuffer = _timeBuffer;
 
@@ -202,7 +211,9 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * @dev Only callable by the owner.
      */
     function setMinBidIncrementPercentage(uint8 _minBidIncrementPercentage) external override onlyOwner {
-        require(_minBidIncrementPercentage > 0, "must be greater than zero");
+        if (_minBidIncrementPercentage == 0) {
+            revert MinBidIncrementPercentageIsZero();
+        }
 
         minBidIncrementPercentage = _minBidIncrementPercentage;
 
@@ -216,14 +227,16 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * catch the revert and pause this contract.
      */
     function _createAuction(string memory label_) internal {
-        try base.registerWithRecord(
-            uint256(keccak256(abi.encodePacked(label_))), address(this), registrationDuration, address(resolver), 0
-        ) returns (uint256 tokenId, uint256) {
+        uint256 id = uint256(keccak256(abi.encodePacked(label_)));
+        try base.ownerOf(id) returns (address owner) {
+            if (owner != address(this)) {
+                revert TokenNotOwnedByAuctionHouse(id);
+            }
             uint40 startTime = uint40(block.timestamp);
             uint40 endTime = startTime + uint40(auctionDuration);
 
             auctionStorage = Auction({
-                tokenId: uint96(tokenId),
+                tokenId: id,
                 amount: 0,
                 startTime: startTime,
                 endTime: endTime,
@@ -231,9 +244,10 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
                 settled: false
             });
 
-            emit AuctionCreated(tokenId, startTime, endTime);
-        } catch Error(string memory) {
+            emit AuctionCreated(id, startTime, endTime);
+        } catch Error(string memory reason) {
             _pause();
+            emit AuctionCreationError(reason);
         }
     }
 
@@ -242,11 +256,19 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * @dev If there are no bids, the tokenId is burned.
      */
     function _settleAuction() internal {
+        require(base.balanceOf(address(this)) > 0, "No Auctions");
+
         IBeraAuctionHouse.Auction memory _auction = auctionStorage;
 
-        require(_auction.startTime != 0, "Auction hasn't begun");
-        require(!_auction.settled, "Auction has already been settled");
-        require(block.timestamp >= _auction.endTime, "Auction hasn't completed");
+        if (_auction.startTime == 0) {
+            revert AuctionNotBegun();
+        }
+        if (_auction.settled) {
+            revert AuctionAlreadySettled();
+        }
+        if (block.timestamp < _auction.endTime) {
+            revert AuctionNotCompleted();
+        }
 
         auctionStorage.settled = true;
 
@@ -257,7 +279,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         }
 
         if (_auction.amount > 0) {
-            _safeTransferETHWithFallback(owner(), _auction.amount);
+            _safeTransferETHWithFallback(owner(), _auction.amount); // TODO: change to beneficiary
         }
 
         SettlementState storage settlementState = settlementHistory[_auction.tokenId];
@@ -351,14 +373,18 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         SettlementState memory settlementState;
         for (uint256 id = latestTokenId; id > 0 && actualCount < auctionCount; --id) {
             settlementState = settlementHistory[id];
-            require(settlementState.blockTimestamp > 1, "Missing data");
+            if (settlementState.blockTimestamp == 0) {
+                revert MissingSettlementsData();
+            }
             if (settlementState.winner == address(0)) continue; // Skip auctions with no bids
 
             prices[actualCount] = uint64PriceToUint256(settlementState.amount);
             ++actualCount;
         }
 
-        require(auctionCount == actualCount, "Not enough history");
+        if (auctionCount != actualCount) {
+            revert NotEnoughHistory();
+        }
     }
 
     /**
@@ -374,7 +400,10 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         returns (Settlement[] memory settlements)
     {
         uint256 maxId = auctionStorage.tokenId;
-        require(startId <= maxId, "startId too large");
+        if (startId > maxId) {
+            revert StartIdTooLarge(startId);
+        }
+
         settlements = new Settlement[](maxId - startId + 1);
         uint256 actualCount = 0;
         SettlementState memory settlementState;

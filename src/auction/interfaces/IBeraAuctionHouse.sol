@@ -3,6 +3,47 @@ pragma solidity ^0.8.19;
 
 /// @title Interface for Bera Names Auction House
 interface IBeraAuctionHouse {
+    /// Errors -----------------------------------------------------------
+    /// @notice Thrown when the token is not up for auction.
+    /// @param tokenId The token ID that is not up for auction.
+    error TokenNotForUpAuction(uint256 tokenId);
+
+    /// @notice Thrown when the auction has expired.
+    error AuctionExpired();
+
+    /// @notice Thrown when the bid is less than the reserve price.
+    error MustSendAtLeastReservePrice();
+
+    /// @notice Thrown when the bid is less than the minimum bid increment percentage amount.
+    error MustSendMoreThanLastBidByMinBidIncrementPercentageAmount();
+
+    /// @notice Thrown when the time buffer is too large.
+    error TimeBufferTooLarge(uint256 timeBuffer);
+
+    /// @notice Thrown when the min bid increment percentage is zero.
+    error MinBidIncrementPercentageIsZero();
+
+    /// @notice Thrown when the auction has not begun.
+    error AuctionNotBegun();
+
+    /// @notice Thrown when the auction has already been settled.
+    error AuctionAlreadySettled();
+
+    /// @notice Thrown when the auction has not completed.
+    error AuctionNotCompleted();
+
+    /// @notice Thrown when there is missing data.
+    error MissingSettlementsData();
+
+    /// @notice Thrown when there is not enough history.
+    error NotEnoughHistory();
+
+    /// @notice Thrown when the start ID is too large.
+    error StartIdTooLarge(uint256 startId);
+
+    /// @notice Thrown when the token is not owned by the auction house.
+    error TokenNotOwnedByAuctionHouse(uint256 tokenId);
+
     struct Auction {
         uint256 tokenId;
         uint128 amount;
@@ -66,6 +107,8 @@ interface IBeraAuctionHouse {
     event AuctionReservePriceUpdated(uint256 reservePrice);
 
     event AuctionMinBidIncrementPercentageUpdated(uint256 minBidIncrementPercentage);
+
+    event AuctionCreationError(string reason);
 
     function settleAuction() external;
 
