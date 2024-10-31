@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 // Admin Controller
-import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Bera Name Service
 import {BNS} from "src/registry/interfaces/BNS.sol";
@@ -27,7 +27,6 @@ import {TextResolver} from "src/resolver/profiles/TextResolver.sol";
 contract BeraDefaultResolver is
     // Accessability Controller
     Multicallable,
-
     // Resolvers
     ABIResolver,
     AddrResolver,
@@ -38,11 +37,9 @@ contract BeraDefaultResolver is
     PubkeyResolver,
     TextResolver,
     ExtendedResolver,
-
     // Admin Controller
     Ownable
 {
-
     /// Errors -----------------------------------------------------------
 
     /// @notice Thown when msg.sender tries to set itself as an operator/delegate.

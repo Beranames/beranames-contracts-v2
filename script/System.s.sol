@@ -13,6 +13,11 @@ import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
+import {BeraAuctionHouse} from "src/auction/BeraAuctionHouse.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IWETH} from "src/auction/interfaces/IWETH.sol";
+import {bArtioPriceOracle} from "src/registrar/types/bArtioPriceOracle.sol";
+import {IPriceOracle} from "src/registrar/interfaces/IPriceOracle.sol";
 
 import {BERA_NODE, ADDR_REVERSE_NODE, REVERSE_NODE, DEFAULT_TTL} from "src/utils/Constants.sol";
 
@@ -30,9 +35,11 @@ contract ContractScript is Script {
 
     ReservedRegistry public reservedRegistry;
     WhitelistValidator public whitelistValidator;
-    PriceOracle public priceOracle;
+    IPriceOracle public priceOracle;
 
     UniversalResolver public universalResolver;
+
+    BeraAuctionHouse public auctionHouse;
 
     // Addresses
     // TODO: Update these with the correct addresses
@@ -70,9 +77,8 @@ contract ContractScript is Script {
         registry.setOwner(REVERSE_NODE, address(registrarAdmin));
 
         // Create the resolver
-        resolver = new BeraDefaultResolver(
-            registry, address(baseRegistrar), address(reverseRegistrar), address(registrarAdmin)
-        );
+        resolver =
+            new BeraDefaultResolver(registry, address(baseRegistrar), address(reverseRegistrar), address(deployer));
 
         // Set the resolver for the base node
         registry.setResolver(bytes32(0), address(resolver));
@@ -84,7 +90,12 @@ contract ContractScript is Script {
 
         // Deploy layer 3 components: public registrar
         // Create the PriceOracle
-        priceOracle = new PriceOracle();
+        // TODO: use pyth for mainnet
+        // address pythAddress = 0x2880aB155794e7179c9eE2e38200202908C17B43;
+        // bytes32 beraUsdPythPriceFeedId = 0x40dd8c66a9582c51a1b03a41d6c68ee5c2c04c8b9c054e81d0f95602ffaefe2f;
+        // priceOracle = new PriceOracle(pythAddress, beraUsdPythPriceFeedId);
+
+        priceOracle = new bArtioPriceOracle();
 
         // Create the WhitelistValidator
         whitelistValidator = new WhitelistValidator(address(registrarAdmin), address(signer));
@@ -105,10 +116,19 @@ contract ContractScript is Script {
             address(registrarAdmin)
         );
         baseRegistrar.addController(address(registrar));
+        resolver.setRegistrarController(address(registrar));
 
         // Deploy the Universal Resovler
         string[] memory urls = new string[](0);
         universalResolver = new UniversalResolver(address(registry), urls);
+
+        // Deploy the auction house
+        // TODO: update honey and weth addresses
+        auctionHouse = new BeraAuctionHouse(
+            baseRegistrar, resolver, IERC20(address(0)), IWETH(address(0)), 1 days, 365 days, 1 ether, 10 seconds, 1
+        );
+        auctionHouse.transferOwnership(address(registrarAdmin));
+        baseRegistrar.addController(address(auctionHouse));
 
         // TODO: Add test domains / initial mints here
 
@@ -122,8 +142,25 @@ contract ContractScript is Script {
         reverseRegistrar.setController(address(registrarAdmin), true);
         reverseRegistrar.setController(address(registrar), true);
         reverseRegistrar.transferOwnership(address(registrar));
+        resolver.transferOwnership(address(registrarAdmin));
+
+        mintToAuctionHouse();
 
         // Stop broadcast
         vm.stopBroadcast();
+    }
+
+    function mintToAuctionHouse() internal {
+        baseRegistrar.addController(deployer);
+
+        string[3] memory emojis = [unicode"💩", unicode"🐻", unicode"🚀"]; // TODO: Add all the emojis
+        uint256 id;
+
+        for (uint256 i = 0; i < emojis.length; i++) {
+            id = uint256(keccak256(bytes(emojis[i])));
+            baseRegistrar.registerWithRecord(id, address(auctionHouse), 365 days, address(resolver), 0);
+        }
+
+        baseRegistrar.removeController(deployer);
     }
 }

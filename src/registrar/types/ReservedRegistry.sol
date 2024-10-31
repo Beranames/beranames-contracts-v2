@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {IReservedRegistry} from "src/registrar/interfaces/IReservedRegistry.sol";
 
@@ -18,10 +18,8 @@ contract ReservedRegistry is Ownable, IReservedRegistry {
     uint256 private _reservedNamesCount;
 
     /// Constructor ------------------------------------------------------
-    
-    constructor(
-        address owner_
-    ) Ownable(owner_) {
+
+    constructor(address owner_) Ownable(owner_) {
         _transferOwnership(owner_);
     }
 

@@ -6,9 +6,7 @@ import {BytesUtils} from "src/resolver/libraries/BytesUtils.sol";
 library NameEncoder {
     using BytesUtils for bytes;
 
-    function dnsEncodeName(
-        string memory name
-    ) internal pure returns (bytes memory dnsName, bytes32 node) {
+    function dnsEncodeName(string memory name) internal pure returns (bytes memory dnsName, bytes32 node) {
         uint8 labelLength = 0;
         bytes memory bytesName = bytes(name);
         uint256 length = bytesName.length;
@@ -25,12 +23,7 @@ library NameEncoder {
             for (uint256 i = length - 1; i >= 0; i--) {
                 if (bytesName[i] == ".") {
                     dnsName[i + 1] = bytes1(labelLength);
-                    node = keccak256(
-                        abi.encodePacked(
-                            node,
-                            bytesName.keccak(i + 1, labelLength)
-                        )
-                    );
+                    node = keccak256(abi.encodePacked(node, bytesName.keccak(i + 1, labelLength)));
                     labelLength = 0;
                 } else {
                     labelLength += 1;
@@ -42,9 +35,7 @@ library NameEncoder {
             }
         }
 
-        node = keccak256(
-            abi.encodePacked(node, bytesName.keccak(0, labelLength))
-        );
+        node = keccak256(abi.encodePacked(node, bytesName.keccak(0, labelLength)));
 
         dnsName[0] = bytes1(labelLength);
         return (dnsName, node);

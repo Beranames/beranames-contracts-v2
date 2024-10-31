@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.8.4;
 
-import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {BNS} from "src/registry/interfaces/BNS.sol";
 import {IReverseRegistrar} from "src/registrar/interfaces/IReverseRegistrar.sol";
@@ -27,20 +28,15 @@ contract ReverseRegistrar is Controllable, IReverseRegistrar {
 
     modifier authorised(address addr) {
         require(
-            addr == msg.sender ||
-                controllers[msg.sender] ||
-                registry.isApprovedForAll(addr, msg.sender) ||
-                ownsContract(addr),
+            addr == msg.sender || controllers[msg.sender] || registry.isApprovedForAll(addr, msg.sender)
+                || ownsContract(addr),
             "ReverseRegistrar: Caller is not a controller or authorised by address or the address itself"
         );
         _;
     }
 
     function setDefaultResolver(address resolver) public onlyOwner {
-        require(
-            address(resolver) != address(0),
-            "ReverseRegistrar: Resolver address must not be 0"
-        );
+        require(address(resolver) != address(0), "ReverseRegistrar: Resolver address must not be 0");
         defaultResolver = AbstractNameResolver(resolver);
         emit DefaultResolverChanged(AbstractNameResolver(resolver));
     }
@@ -63,15 +59,9 @@ contract ReverseRegistrar is Controllable, IReverseRegistrar {
      * @param resolver The resolver of the reverse node
      * @return The BNS node hash of the reverse record.
      */
-    function claimForAddr(
-        address addr,
-        address owner,
-        address resolver
-    ) public authorised(addr) returns (bytes32) {
+    function claimForAddr(address addr, address owner, address resolver) public authorised(addr) returns (bytes32) {
         bytes32 labelHash = sha3HexAddress(addr);
-        bytes32 reverseNode = keccak256(
-            abi.encodePacked(ADDR_REVERSE_NODE, labelHash)
-        );
+        bytes32 reverseNode = keccak256(abi.encodePacked(ADDR_REVERSE_NODE, labelHash));
         registry.setSubnodeRecord(ADDR_REVERSE_NODE, labelHash, owner, resolver, 0);
         emit ReverseClaimed(addr, reverseNode);
         return reverseNode;
@@ -84,10 +74,7 @@ contract ReverseRegistrar is Controllable, IReverseRegistrar {
      * @param resolver The address of the resolver to set; 0 to leave unchanged.
      * @return The BNS node hash of the reverse record.
      */
-    function claimWithResolver(
-        address owner,
-        address resolver
-    ) public returns (bytes32) {
+    function claimWithResolver(address owner, address resolver) public returns (bytes32) {
         return claimForAddr(msg.sender, owner, resolver);
     }
 
@@ -99,13 +86,7 @@ contract ReverseRegistrar is Controllable, IReverseRegistrar {
      * @return The BNS node hash of the reverse record.
      */
     function setName(string memory name) public returns (bytes32) {
-        return
-            setNameForAddr(
-                msg.sender,
-                msg.sender,
-                address(defaultResolver),
-                name
-            );
+        return setNameForAddr(msg.sender, msg.sender, address(defaultResolver), name);
     }
 
     /**
@@ -118,15 +99,14 @@ contract ReverseRegistrar is Controllable, IReverseRegistrar {
      * @param name The name to set for this address.
      * @return The BNS node hash of the reverse record.
      */
-    function setNameForAddr(
-        address addr,
-        address owner,
-        address resolver,
-        string memory name
-    ) public override returns (bytes32) {
-        bytes32 node = claimForAddr(addr, owner, resolver);
-        AbstractNameResolver(resolver).setName(node, name);
-        return node;
+    function setNameForAddr(address addr, address owner, address resolver, string memory name)
+        public
+        override
+        returns (bytes32)
+    {
+        bytes32 node_ = claimForAddr(addr, owner, resolver);
+        AbstractNameResolver(resolver).setName(node_, name);
+        return node_;
     }
 
     /**
@@ -135,10 +115,7 @@ contract ReverseRegistrar is Controllable, IReverseRegistrar {
      * @return The BNS node hash.
      */
     function node(address addr) public pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(ADDR_REVERSE_NODE, sha3HexAddress(addr))
-            );
+        return keccak256(abi.encodePacked(ADDR_REVERSE_NODE, sha3HexAddress(addr)));
     }
 
     /**
@@ -151,11 +128,7 @@ contract ReverseRegistrar is Controllable, IReverseRegistrar {
     function sha3HexAddress(address addr) private pure returns (bytes32 ret) {
         bytes16 lookup = "0123456789abcdef";
         assembly {
-            for {
-                let i := 40
-            } gt(i, 0) {
-
-            } {
+            for { let i := 40 } gt(i, 0) {} {
                 i := sub(i, 1)
                 mstore8(i, byte(and(addr, 0xf), lookup))
                 addr := div(addr, 0x10)

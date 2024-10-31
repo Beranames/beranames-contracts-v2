@@ -73,7 +73,10 @@ library StringUtils {
 
     // Checks if the sequence starting at index is a Zero-Width Joiner (ZWJ)
     function _isZeroWidthJoiner(bytes memory strBytes, uint256 index) private pure returns (bool) {
-        return (strBytes[index] == 0xE2 && index + 2 < strBytes.length && strBytes[index + 1] == 0x80 && strBytes[index + 2] == 0x8D);
+        return (
+            strBytes[index] == 0xE2 && index + 2 < strBytes.length && strBytes[index + 1] == 0x80
+                && strBytes[index + 2] == 0x8D
+        );
     }
 
     // Checks if the character at index is a combining mark or modifier
@@ -101,8 +104,11 @@ library StringUtils {
             uint8 b2 = uint8(strBytes[index + 2]);
             uint8 b3 = uint8(strBytes[index + 3]);
             // Check for specific sequences that are known modifiers
-            if ((b1 == 0x9F && b2 == 0x8F && (b3 >= 0xBB && b3 <= 0xBF)) || // Skin tone modifiers
-                (b1 == 0x9F && b2 == 0xA4 && b3 == 0xB0)) { // Gender modifiers
+            if (
+                (b1 == 0x9F && b2 == 0x8F && (b3 >= 0xBB && b3 <= 0xBF)) // Skin tone modifiers
+                    || (b1 == 0x9F && b2 == 0xA4 && b3 == 0xB0)
+            ) {
+                // Gender modifiers
                 return true;
             }
         }
@@ -112,6 +118,9 @@ library StringUtils {
 
     // Checks if the character at index is a Regional Indicator Symbol (used for flag emojis)
     function _isRegionalIndicator(bytes memory strBytes, uint256 index) private pure returns (bool) {
-        return (strBytes[index] == 0xF0 && index + 3 < strBytes.length && strBytes[index + 1] == 0x9F && strBytes[index + 2] == 0x87);
+        return (
+            strBytes[index] == 0xF0 && index + 3 < strBytes.length && strBytes[index + 1] == 0x9F
+                && strBytes[index + 2] == 0x87
+        );
     }
 }
