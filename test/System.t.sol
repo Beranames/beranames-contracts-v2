@@ -50,6 +50,8 @@ contract SystemTest is BaseTest {
 
     string public constant DEFAULT_NAME = "foo-bar";
     string public constant DEFAULT_NAME_WITH_BERA = "foo-bar.bera";
+    uint8 public constant DEFAULT_ROUND_ID = 1;
+    uint8 public constant DEFAULT_ROUND_TOTAL_MINT = 1;
 
     MockPyth pyth;
     bytes32 BERA_USD_PYTH_PRICE_FEED_ID = bytes32(uint256(0x1));
@@ -530,8 +532,8 @@ contract SystemTest is BaseTest {
     function defaultWhitelistRequest() internal view returns (RegistrarController.WhitelistRegisterRequest memory) {
         return RegistrarController.WhitelistRegisterRequest({
             registerRequest: defaultRequest(),
-            round_id: 1,
-            round_total_mint: 1
+            round_id: DEFAULT_ROUND_ID,
+            round_total_mint: DEFAULT_ROUND_TOTAL_MINT
         });
     }
 
@@ -548,7 +550,8 @@ contract SystemTest is BaseTest {
     }
 
     function sign() internal view returns (bytes memory) {
-        bytes memory payload = abi.encode(alice, address(0), 365 days, DEFAULT_NAME, 1, 10);
+        bytes memory payload =
+            abi.encode(alice, address(0), 365 days, DEFAULT_NAME, DEFAULT_ROUND_ID, DEFAULT_ROUND_TOTAL_MINT);
         bytes32 hash =
             keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", abi.encodePacked(keccak256(payload))));
 
