@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {BeraAuctionHouse} from "src/auction/BeraAuctionHouse.sol";
 import {BaseRegistrar} from "src/registrar/types/BaseRegistrar.sol";
 import {BeraDefaultResolver} from "src/resolver/Resolver.sol";
-import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IWETH} from "src/auction/interfaces/IWETH.sol";
 import {IBeraAuctionHouse} from "src/auction/interfaces/IBeraAuctionHouse.sol";
 
