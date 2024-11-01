@@ -31,6 +31,13 @@ contract StringUtilsTest is Test {
         assertEq(actualCount, expectedCount, "Complex emoji (family) character count mismatch");
     }
 
+    function test_complexEmoji_two() public pure {
+        string memory s = unicode"👁️‍🗨️";
+        uint256 expectedCount = 1;
+        uint256 actualCount = s.strlen();
+        assertEq(actualCount, expectedCount, "Complex emoji (Eye in Speech Bubble) character count mismatch");
+    }
+
     function test_mixedString() public pure {
         // Mixed string with ASCII, basic emojis, and complex emojis
         string memory s = unicode"foob👋👨‍👩‍👧‍👦";

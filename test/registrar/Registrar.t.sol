@@ -103,6 +103,55 @@ contract RegistrarTest is SystemTest {
         registrar.register{value: 500 ether}(req);
     }
 
+    //// TESTING VALID() ////
+    function test__valid__success_random_string() public view {
+        string memory name = "foo";
+        bool isValid = registrar.valid(name);
+        // utfLen 3
+        // strlen 3
+        assertTrue(isValid, "foo should be valid");
+    }
+
+    function test__valid__success_one_char_no_emoji() public view {
+        string memory name = "a";
+        bool isValid = registrar.valid(name);
+        // utfLen 1
+        // strlen 1
+        assertTrue(isValid, "a should be valid");
+    }
+
+    function test__valid__success_one_char_one_emoji() public view {
+        string memory name = unicode"a💩";
+        bool isValid = registrar.valid(name);
+        // utfLen 2
+        // strlen 2
+        assertTrue(isValid, unicode"a💩 should be valid");
+    }
+
+    function test__valid__failure_one_simple_emoji() public view {
+        string memory name = unicode"💩";
+        bool isValid = registrar.valid(name);
+        // utfLen 1
+        // strlen 1
+        assertFalse(isValid, unicode"💩 should be invalid");
+    }
+
+    function test__valid__failure_one_complex_emoji() public view {
+        string memory name = unicode"🐻‍❄️";
+        bool isValid = registrar.valid(name);
+        // utfLen 4
+        // strlen 2
+        assertFalse(isValid, unicode"🐻‍❄️ should be invalid");
+    }
+
+    function test__valid__failure_one_very_complex_emoji() public view {
+        string memory name = unicode"👁️‍🗨️";
+        bool isValid = registrar.valid(name);
+        // utfLen 2
+        // strlen 2
+        assertFalse(isValid, unicode"👁️‍🗨️ should be invalid");
+    }
+
     function defaultRequest(string memory name_, address owner_)
         internal
         view
