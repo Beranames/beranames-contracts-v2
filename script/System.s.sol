@@ -60,8 +60,10 @@ contract ContractScript is Script {
             registry,
             address(deployer),
             BERA_NODE,
-            "https://beranames.xyz/metadata/", // TODO: Update this with the correct metadata URL
-            "https://beranames.xyz/collection.json" // TODO: Update this with the correct collection URL
+            "https://www.beranames.com/metadata/berachain-testnet-b-artio/", // bartio-testnet
+            "https://www.beranames.com/metadata/berachain-testnet-b-artio/collection" // bartio-testnet collection
+                // "https://www.beranames.com/metadata/berachain-mainnet/", // berachain-mainnet
+                // "https://www.beranames.com/metadata/berachain-mainnet/collection" // berachain-mainnet collection
         );
 
         // Create the reverse registrar
