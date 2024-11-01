@@ -85,4 +85,104 @@ contract StringUtilsTest is Test {
         uint256 actualCount = s.strlen();
         assertEq(actualCount, expectedCount, "Emoji with gender modifier character count mismatch");
     }
+
+    ///// Testing one emoji for each unicode length from https://unicode.org/Public/emoji/latest /////
+    // ⌛,U+231B,1
+    function test_emoji_one_unicode_strlen() public pure {
+        string memory emoji = unicode"⌛";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1");
+    }
+
+    function test_emoji_one_unicode_utf8Length() public pure {
+        string memory emoji = unicode"⌛";
+        assertEq(emoji.utf8Length(), 1, "Utf8 length should be 1");
+    }
+
+    // ℹ️,U+2139 U+FE0F,2
+    function test_emoji_two_unicode_strlen() public pure {
+        string memory emoji = unicode"ℹ️";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
+    }
+
+    function test_emoji_two_unicode_utf8Length() public pure {
+        string memory emoji = unicode"ℹ️";
+        assertEq(emoji.utf8Length(), 2, "Utf8 length should be 2");
+    }
+
+    // 1️⃣,U+0031 U+FE0F U+20E3,3
+    function test_emoji_three_unicode_strlen() public pure {
+        string memory emoji = unicode"1️⃣";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
+    }
+
+    function test_emoji_three_unicode_utf8Length() public pure {
+        string memory emoji = unicode"1️⃣";
+        assertEq(emoji.utf8Length(), 3, "Utf8 length should be 3");
+    }
+
+    // 👨‍⚕️,U+1F468 U+200D U+2695 U+FE0F,4
+    function test_emoji_four_unicode_strlen() public pure {
+        string memory emoji = unicode"👨‍⚕️";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
+    }
+
+    function test_emoji_four_unicode_utf8Length() public pure {
+        string memory emoji = unicode"👨‍⚕️";
+        assertEq(emoji.utf8Length(), 4, "Utf8 length should be 4");
+    }
+
+    //👨🏻‍⚕️,U+1F468 U+1F3FB U+200D U+2695 U+FE0F,5
+    function test_emoji_five_unicode_strlen() public pure {
+        string memory emoji = unicode"👨🏻‍⚕️";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
+    }
+
+    function test_emoji_five_unicode_utf8Length() public pure {
+        string memory emoji = unicode"👨🏻‍⚕️";
+        assertEq(emoji.utf8Length(), 5, "Utf8 length should be 5");
+    }
+
+    // 👩‍🦯‍➡️,U+1F469 U+200D U+1F9AF U+200D U+27A1 U+FE0F,6
+    function test_emoji_six_unicode_strlen() public pure {
+        string memory emoji = unicode"👩‍🦯‍➡️";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
+    }
+
+    function test_emoji_six_unicode_utf8Length() public pure {
+        string memory emoji = unicode"👩‍🦯‍➡️";
+        assertEq(emoji.utf8Length(), 6, "Utf8 length should be 6");
+    }
+
+    // 👩🏻‍🦯‍➡️,U+1F469 U+1F3FB U+200D U+1F9AF U+200D U+27A1 U+FE0F,7
+    function test_emoji_seven_unicode_strlen() public pure {
+        string memory emoji = unicode"👩🏻‍🦯‍➡️";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
+    }
+
+    function test_emoji_seven_unicode_utf8Length() public pure {
+        string memory emoji = unicode"👩🏻‍🦯‍➡️";
+        assertEq(emoji.utf8Length(), 7, "Utf8 length should be 7");
+    }
+
+    // 🏃🏻‍♀️‍➡️,U+1F3C3 U+1F3FB U+200D U+2640 U+FE0F U+200D U+27A1 U+FE0F,8
+    function test_emoji_eight_unicode_strlen() public pure {
+        string memory emoji = unicode"🏃🏻‍♀️‍➡️";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
+    }
+
+    function test_emoji_eight_unicode_utf8Length() public pure {
+        string memory emoji = unicode"🏃🏻‍♀️‍➡️";
+        assertEq(emoji.utf8Length(), 8, "Utf8 length should be 8");
+    }
+
+    // 👨🏻‍❤️‍💋‍👨🏻,U+1F468 U+1F3FB U+200D U+2764 U+FE0F U+200D U+1F48B U+200D U+1F468 U+1F3FB,10
+    function test_emoji_ten_unicode_strlen() public pure {
+        string memory emoji = unicode"👨🏻‍❤️‍💋‍👨🏻";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
+    }
+
+    function test_emoji_ten_unicode_utf8Length() public pure {
+        string memory emoji = unicode"👨🏻‍❤️‍💋‍👨🏻";
+        assertEq(emoji.utf8Length(), 10, "Utf8 length should be 10");
+    }
 }

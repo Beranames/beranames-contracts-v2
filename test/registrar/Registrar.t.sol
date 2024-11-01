@@ -128,28 +128,52 @@ contract RegistrarTest is SystemTest {
         assertTrue(isValid, unicode"a💩 should be valid");
     }
 
-    function test__valid__failure_one_simple_emoji() public view {
-        string memory name = unicode"💩";
+    function test__valid__failure_one_unicode_emoji() public view {
+        string memory name = unicode"⌛";
         bool isValid = registrar.valid(name);
-        // utfLen 1
-        // strlen 1
         assertFalse(isValid, unicode"💩 should be invalid");
     }
 
-    function test__valid__failure_one_complex_emoji() public view {
-        string memory name = unicode"🐻‍❄️";
+    function test__valid__failure_two_unicode_emojis() public view {
+        string memory name = unicode"ℹ️";
         bool isValid = registrar.valid(name);
-        // utfLen 4
-        // strlen 2
-        assertFalse(isValid, unicode"🐻‍❄️ should be invalid");
+        assertFalse(isValid, unicode"ℹ️ should be invalid");
     }
 
-    function test__valid__failure_one_very_complex_emoji() public view {
-        string memory name = unicode"👁️‍🗨️";
+    function test__valid__failure_three_unicode_emojis() public view {
+        string memory name = unicode"1️⃣";
         bool isValid = registrar.valid(name);
-        // utfLen 2
-        // strlen 2
-        assertFalse(isValid, unicode"👁️‍🗨️ should be invalid");
+        assertFalse(isValid, unicode"1️⃣ should be invalid");
+    }
+
+    function test__valid__failure_four_unicode_emojis() public view {
+        string memory name = unicode"👨‍⚕️";
+        bool isValid = registrar.valid(name);
+        assertFalse(isValid, unicode"👨‍⚕️ should be invalid");
+    }
+
+    function test__valid__failure_five_unicode_emojis() public view {
+        string memory name = unicode"👨🏻‍⚕️";
+        bool isValid = registrar.valid(name);
+        assertFalse(isValid, unicode"👨🏻‍⚕️ should be invalid");
+    }
+
+    function test__valid__failure_six_unicode_emojis() public view {
+        string memory name = unicode"👩‍🦯‍➡️";
+        bool isValid = registrar.valid(name);
+        assertFalse(isValid, unicode"👩‍🦯‍➡️ should be invalid");
+    }
+
+    function test__valid__failure_seven_unicode_emojis() public view {
+        string memory name = unicode"🏃🏻‍♀️‍➡️";
+        bool isValid = registrar.valid(name);
+        assertFalse(isValid, unicode"🏃🏻‍♀️‍➡️ should be invalid");
+    }
+
+    function test__valid__failure_ten_unicode_emojis() public view {
+        string memory name = unicode"👨🏻‍❤️‍💋‍👨🏻";
+        bool isValid = registrar.valid(name);
+        assertFalse(isValid, unicode"👨🏻‍❤️‍💋‍👨🏻 should be invalid");
     }
 
     function defaultRequest(string memory name_, address owner_)
