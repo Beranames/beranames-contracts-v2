@@ -273,7 +273,8 @@ contract RegistrarController is Ownable {
     ///
     /// @return `true` if the name is equal to or longer than MIN_NAME_LENGTH, else `false`.
     function valid(string memory name) public pure returns (bool) {
-        return name.strlen() >= MIN_NAME_LENGTH;
+        uint256 utfLen = name.utf8Length();
+        return utfLen > 0 && !(name.strlen() == MIN_NAME_LENGTH && utfLen > MIN_NAME_LENGTH);
     }
 
     /// @notice Checks whether the provided `name` is available.

@@ -144,23 +144,7 @@ contract ContractScript is Script {
         reverseRegistrar.transferOwnership(address(registrar));
         resolver.transferOwnership(address(registrarAdmin));
 
-        mintToAuctionHouse();
-
         // Stop broadcast
         vm.stopBroadcast();
-    }
-
-    function mintToAuctionHouse() internal {
-        baseRegistrar.addController(deployer);
-
-        string[3] memory emojis = [unicode"💩", unicode"🐻", unicode"🚀"]; // TODO: Add all the emojis
-        uint256 id;
-
-        for (uint256 i = 0; i < emojis.length; i++) {
-            id = uint256(keccak256(bytes(emojis[i])));
-            baseRegistrar.registerWithRecord(id, address(auctionHouse), 365 days, address(resolver), 0);
-        }
-
-        baseRegistrar.removeController(deployer);
     }
 }
