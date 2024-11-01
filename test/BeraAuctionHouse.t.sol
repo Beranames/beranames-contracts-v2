@@ -16,8 +16,6 @@ contract BeraAuctionHouseTest is SystemTest {
 
     function setUp() public virtual override {
         super.setUp();
-
-        mintToAuctionHouse();
     }
 
     function test_owner() public view {
@@ -38,7 +36,7 @@ contract BeraAuctionHouseTest is SystemTest {
         assertEq(auctionHouse.auction().settled, false, "auctionHouse settled");
 
         // check that auction house owns the nft
-        assertEq(baseRegistrar.balanceOf(address(auctionHouse)), 2, "auctionHouse base balance");
+        assertEq(baseRegistrar.balanceOf(address(auctionHouse)), 1, "auctionHouse base balance");
         assertEq(baseRegistrar.isAvailable(getTokenId(EMOJI)), false, "auctionHouse base available");
         assertEq(baseRegistrar.ownerOf(getTokenId(EMOJI)), address(auctionHouse), "auctionHouse base owner");
     }
@@ -175,10 +173,5 @@ contract BeraAuctionHouseTest is SystemTest {
 
     function unpause(string memory label_) internal prank(registrarAdmin) {
         auctionHouse.unpause(label_);
-    }
-
-    function mintToAuctionHouse() internal prank(address(auctionHouse)) {
-        baseRegistrar.registerWithRecord(getTokenId(EMOJI), address(auctionHouse), 365 days, address(resolver), 0);
-        baseRegistrar.registerWithRecord(getTokenId(BEAR_EMOJI), address(auctionHouse), 365 days, address(resolver), 0);
     }
 }

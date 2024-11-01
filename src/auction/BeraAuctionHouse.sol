@@ -228,10 +228,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      */
     function _createAuction(string memory label_) internal {
         uint256 id = uint256(keccak256(abi.encodePacked(label_)));
-        try base.ownerOf(id) returns (address owner) {
-            if (owner != address(this)) {
-                revert TokenNotOwnedByAuctionHouse(id);
-            }
+        try base.registerWithRecord(id, address(this), registrationDuration, address(resolver), 0) returns (uint256) {
             uint40 startTime = uint40(block.timestamp);
             uint40 endTime = startTime + uint40(auctionDuration);
 
