@@ -267,14 +267,20 @@ contract RegistrarController is Ownable {
         emit PaymentReceiverUpdated(paymentReceiver_);
     }
 
-    /// @notice Checks whether the provided `name` is long enough.
-    ///
+    /// @notice Checks whether the provided `name` is valid. A name is valid if it's longer than 0 chars and not a single emoji (simple or complex).
+    /// a => valid
+    /// foo => valid
+    /// a💩 => valid
+    /// 💩💩 => valid
+    /// 💩 => invalid
+    /// 👁️ => invalid
     /// @param name The name to check the length of.
     ///
-    /// @return `true` if the name is equal to or longer than MIN_NAME_LENGTH, else `false`.
+    /// @return `true` if the name is valid, else `false`.
     function valid(string memory name) public pure returns (bool) {
         uint256 utfLen = name.utf8Length();
-        return utfLen > 0 && !(name.strlen() == MIN_NAME_LENGTH && utfLen > MIN_NAME_LENGTH);
+        uint256 strlen = name.strlen();
+        return utfLen > 0 && !(strlen == MIN_NAME_LENGTH && utfLen > MIN_NAME_LENGTH);
     }
 
     /// @notice Checks whether the provided `name` is available.

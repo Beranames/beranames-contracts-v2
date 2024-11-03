@@ -31,6 +31,13 @@ contract StringUtilsTest is Test {
         assertEq(actualCount, expectedCount, "Complex emoji (family) character count mismatch");
     }
 
+    function test_complexEmoji_two() public pure {
+        string memory s = unicode"👁️‍🗨️";
+        uint256 expectedCount = 1;
+        uint256 actualCount = s.strlen();
+        assertEq(actualCount, expectedCount, "Complex emoji (Eye in Speech Bubble) character count mismatch");
+    }
+
     function test_mixedString() public pure {
         // Mixed string with ASCII, basic emojis, and complex emojis
         string memory s = unicode"foob👋👨‍👩‍👧‍👦";
@@ -77,5 +84,60 @@ contract StringUtilsTest is Test {
         uint256 expectedCount = 1;
         uint256 actualCount = s.strlen();
         assertEq(actualCount, expectedCount, "Emoji with gender modifier character count mismatch");
+    }
+
+    ///// Testing one emoji for each unicode length from https://unicode.org/Public/emoji/latest /////
+    // ⌛,U+231B,1
+    function test_emoji_one_unicode_strlen() public pure {
+        string memory emoji = unicode"⌛";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1");
+    }
+
+    // ℹ️,U+2139 U+FE0F,2
+    function test_emoji_two_unicode_strlen() public pure {
+        string memory emoji = unicode"ℹ️";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
+    }
+
+    // 1️⃣,U+0031 U+FE0F U+20E3,3
+    function test_emoji_three_unicode_strlen() public pure {
+        string memory emoji = unicode"1️⃣";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
+    }
+
+    // 👨‍⚕️,U+1F468 U+200D U+2695 U+FE0F,4
+    function test_emoji_four_unicode_strlen() public pure {
+        string memory emoji = unicode"👨‍⚕️";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
+    }
+
+    //👨🏻‍⚕️,U+1F468 U+1F3FB U+200D U+2695 U+FE0F,5
+    function test_emoji_five_unicode_strlen() public pure {
+        string memory emoji = unicode"👨🏻‍⚕️";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
+    }
+
+    // 👩‍🦯‍➡️,U+1F469 U+200D U+1F9AF U+200D U+27A1 U+FE0F,6
+    function test_emoji_six_unicode_strlen() public pure {
+        string memory emoji = unicode"👩‍🦯‍➡️";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
+    }
+
+    // 👩🏻‍🦯‍➡️,U+1F469 U+1F3FB U+200D U+1F9AF U+200D U+27A1 U+FE0F,7
+    function test_emoji_seven_unicode_strlen() public pure {
+        string memory emoji = unicode"👩🏻‍🦯‍➡️";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
+    }
+
+    // 🏃🏻‍♀️‍➡️,U+1F3C3 U+1F3FB U+200D U+2640 U+FE0F U+200D U+27A1 U+FE0F,8
+    function test_emoji_eight_unicode_strlen() public pure {
+        string memory emoji = unicode"🏃🏻‍♀️‍➡️";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
+    }
+
+    // 👨🏻‍❤️‍💋‍👨🏻,U+1F468 U+1F3FB U+200D U+2764 U+FE0F U+200D U+1F48B U+200D U+1F468 U+1F3FB,10
+    function test_emoji_ten_unicode_strlen() public pure {
+        string memory emoji = unicode"👨🏻‍❤️‍💋‍👨🏻";
+        assertEq(emoji.strlen(), 1, "Strlen shoud be 1"); // FAILURE
     }
 }
