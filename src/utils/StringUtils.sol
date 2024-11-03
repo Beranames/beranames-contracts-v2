@@ -3,26 +3,7 @@ pragma solidity ^0.8.0;
 
 library StringUtils {
     function utf8Length(string memory s) internal pure returns (uint256) {
-        uint256 len;
-        uint256 i = 0;
-        uint256 bytelength = bytes(s).length;
-        for (len = 0; i < bytelength; len++) {
-            bytes1 b = bytes(s)[i];
-            if (b < 0x80) {
-                i += 1;
-            } else if (b < 0xE0) {
-                i += 2;
-            } else if (b < 0xF0) {
-                i += 3;
-            } else if (b < 0xF8) {
-                i += 4;
-            } else if (b < 0xFC) {
-                i += 5;
-            } else {
-                i += 6;
-            }
-        }
-        return len;
+        return bytes(s).length;
     }
 
     /**
@@ -132,6 +113,24 @@ library StringUtils {
                     || (b1 == 0x9F && b2 == 0xA4 && b3 == 0xB0)
             ) {
                 // Gender modifiers
+                return true;
+            }
+        }
+
+        // Check for Variation Selector-16 (U+FE0F)
+        if (b == 0xEF && index + 2 < strBytes.length) {
+            uint8 b1 = uint8(strBytes[index + 1]);
+            uint8 b2 = uint8(strBytes[index + 2]);
+            if (b1 == 0xB8 && b2 == 0x8F) {
+                return true;
+            }
+        }
+
+        // Check for Combining Enclosing Keycap (U+20E3)
+        if (b == 0xE2 && index + 2 < strBytes.length) {
+            uint8 b1 = uint8(strBytes[index + 1]);
+            uint8 b2 = uint8(strBytes[index + 2]);
+            if (b1 == 0x83 && b2 == 0xA3) {
                 return true;
             }
         }

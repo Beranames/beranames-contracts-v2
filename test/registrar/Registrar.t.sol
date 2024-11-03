@@ -11,9 +11,12 @@ import {BERA_NODE} from "src/utils/Constants.sol";
 import {ReverseRegistrar} from "src/registrar/ReverseRegistrar.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
+import {StringUtils} from "src/utils/StringUtils.sol";
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 
 contract RegistrarTest is SystemTest {
+    using StringUtils for string;
+
     function setUp() public virtual override {
         super.setUp();
 
@@ -131,7 +134,7 @@ contract RegistrarTest is SystemTest {
     function test__valid__failure_one_unicode_emoji() public view {
         string memory name = unicode"⌛";
         bool isValid = registrar.valid(name);
-        assertFalse(isValid, unicode"💩 should be invalid");
+        assertFalse(isValid, unicode"⌛ should be invalid");
     }
 
     function test__valid__failure_two_unicode_emojis() public view {
