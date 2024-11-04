@@ -129,8 +129,8 @@ contract RegistrarController is Ownable {
     /// @param round_total_mint The total number of mints allowed in the round.
     struct WhitelistRegisterRequest {
         RegisterRequest registerRequest;
-        uint8 round_id;
-        uint8 round_total_mint;
+        uint256 round_id;
+        uint256 round_total_mint;
     }
 
     /// Storage ----------------------------------------------------------
@@ -164,8 +164,7 @@ contract RegistrarController is Ownable {
 
     /// @notice The mapping of mints count by round by address.
     /// example: 0x123 => { 1st Round => 3 mints, 2nd Round => 1 mint }
-    /// @dev uint8 because there should be less than 255 rounds and limit will be less than 255
-    mapping(address => mapping(uint8 => uint8)) public mintsCountByRoundByAddress;
+    mapping(address => mapping(uint256 => uint256)) public mintsCountByRoundByAddress;
 
     /// @notice The timestamp of "go-live". Used for setting at-launch pricing premium.
     uint256 public launchTime;
@@ -355,7 +354,6 @@ contract RegistrarController is Ownable {
         _validateWhitelist(request, signature);
         _validateRegistration(request.registerRequest);
         _register(request.registerRequest);
-        mintsCountByRoundByAddress[msg.sender][request.round_id]++;
     }
 
     /// @notice Internal helper for registering a name.
@@ -442,8 +440,9 @@ contract RegistrarController is Ownable {
         // Validate signature
         whitelistValidator.validateSignature(payload, v, r, s);
 
-        // Store the message hash in used signatures
+        // Store the message hash in used signatures and increment the mint count for the round
         usedSignatures[keccak256(payload)] = true;
+        mintsCountByRoundByAddress[msg.sender][request.round_id]++;
     }
 
     /// @notice Helper for deciding whether to include a launch-premium.
