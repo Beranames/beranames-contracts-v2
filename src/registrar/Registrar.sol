@@ -76,6 +76,18 @@ contract RegistrarController is Ownable {
     /// @param expires The date that the registration expires.
     event NameRegistered(string name, bytes32 indexed label, address indexed owner, uint256 expires);
 
+    /// @notice Emitted when a name is registered with a referral.
+    ///
+    /// @dev two different events to keep compatibility with ENS
+    /// @param name The name that was registered
+    /// @param label The hashed label of the name
+    /// @param owner The owner of the name that was registered
+    /// @param referral The address of the referral
+    /// @param expires The date that the registration expires
+    event NameRegisteredWithReferral(
+        string name, bytes32 indexed label, address indexed owner, address indexed referral, uint256 expires
+    );
+
     /// @notice Emitted when a name is renewed.
     ///
     /// @param name The name that was renewed.
@@ -481,7 +493,13 @@ contract RegistrarController is Ownable {
             _setReverseRecord(request.name, request.resolver, msg.sender);
         }
 
+        // two different events for ENS compatibility
         emit NameRegistered(request.name, keccak256(bytes(request.name)), request.owner, expires);
+        if (request.referrer != address(0)) {
+            emit NameRegisteredWithReferral(
+                request.name, keccak256(bytes(request.name)), request.owner, request.referrer, expires
+            );
+        }
     }
 
     /// @notice Refunds any remaining `msg.value` after processing a registration or renewal given`price`.
