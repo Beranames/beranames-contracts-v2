@@ -127,7 +127,15 @@ contract ContractScript is Script {
         // Deploy the auction house
         // TODO: update honey and weth addresses
         auctionHouse = new BeraAuctionHouse(
-            baseRegistrar, resolver, IERC20(address(0)), IWETH(address(0)), 1 days, 365 days, 1 ether, 10 seconds, 1
+            baseRegistrar,
+            resolver,
+            IWETH(address(0)),
+            1 days,
+            365 days,
+            1 ether,
+            10 seconds,
+            1,
+            address(registrarAdmin)
         );
         auctionHouse.transferOwnership(address(registrarAdmin));
         baseRegistrar.addController(address(auctionHouse));
