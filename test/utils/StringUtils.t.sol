@@ -142,6 +142,24 @@ contract StringUtilsTest is Test {
         assertEq(emoji.strlen(), 1, "Strlen shoud be 1");
     }
 
+    // 🏴󠁧󠁢󠁥󠁮󠁧󠁿,U+1F3F4 U+E0067 U+E0062 U+E0065 U+E006E U+E0067 U+E007F,7
+    function test_emoji_england() public pure {
+        string memory emoji = unicode"🏴󠁧󠁢󠁥󠁮󠁧󠁿";
+        assertEq(emoji.strlen(), 1, "England Strlen shoud be 1");
+    }
+
+    // 🏴󠁧󠁢󠁳󠁣󠁴󠁿,U+1F3F4 U+E0067 U+E0062 U+E0073 U+E0063 U+E0074 U+E007F,7
+    function test_emoji_scotland() public pure {
+        string memory emoji = unicode"🏴󠁧󠁢󠁳󠁣󠁴󠁿";
+        assertEq(emoji.strlen(), 1, "Scotland Strlen shoud be 1");
+    }
+
+    // 🏴󠁧󠁢󠁷󠁬󠁳󠁿,U+1F3F4 U+E0067 U+E0062 U+E0077 U+E006C U+E0073 U+E007F,7
+    function test_emoji_wales() public pure {
+        string memory emoji = unicode"🏴󠁧󠁢󠁷󠁬󠁳󠁿";
+        assertEq(emoji.strlen(), 1, "Wales Strlen shoud be 1");
+    }
+
     function test_all_emojis() public {
         EmojiList emojiList = new EmojiList();
 
