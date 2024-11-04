@@ -11,12 +11,10 @@ import {BERA_NODE} from "src/utils/Constants.sol";
 import {ReverseRegistrar} from "src/registrar/ReverseRegistrar.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
-import {StringUtils} from "src/utils/StringUtils.sol";
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
+import {EmojiList} from "../utils/EmojiList.t.sol";
 
 contract RegistrarTest is SystemTest {
-    using StringUtils for string;
-
     function setUp() public virtual override {
         super.setUp();
 
@@ -177,6 +175,15 @@ contract RegistrarTest is SystemTest {
         string memory name = unicode"👨🏻‍❤️‍💋‍👨🏻";
         bool isValid = registrar.valid(name);
         assertFalse(isValid, unicode"👨🏻‍❤️‍💋‍👨🏻 should be invalid");
+    }
+
+    function test__valid__failure_all_emojis() public {
+        EmojiList emojiList = new EmojiList();
+        for (uint256 i = 0; i < emojiList.emojisLength(); i++) {
+            string memory emoji = emojiList.emojis(i);
+            bool isValid = registrar.valid(emoji);
+            assertFalse(isValid, string(abi.encodePacked("Emoji: ", emoji, " should be invalid")));
+        }
     }
 
     function defaultRequest(string memory name_, address owner_)
