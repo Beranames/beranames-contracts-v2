@@ -57,6 +57,9 @@ contract RegistrarController is Ownable {
     /// @notice Thrown when a reverse record is being set for another address.
     error CantSetReverseRecordForOthers();
 
+    /// @notice Thrown when a mint limit for a round is reached.
+    error MintLimitForRoundReached();
+
     /// Events -----------------------------------------------------------
 
     /// @notice Emitted when an ETH payment was processed successfully.
@@ -120,6 +123,16 @@ contract RegistrarController is Ownable {
         address referrer;
     }
 
+    /// @notice The details of a whitelist registration request.
+    /// @param registerRequest The `RegisterRequest` struct containing the details for the registration.
+    /// @param round_id The ID of the round that the registration is being made in.
+    /// @param round_total_mint The total number of mints allowed in the round.
+    struct WhitelistRegisterRequest {
+        RegisterRequest registerRequest;
+        uint256 round_id;
+        uint256 round_total_mint;
+    }
+
     /// Storage ----------------------------------------------------------
 
     /// @notice The implementation of the `BaseRegistrar`.
@@ -148,6 +161,10 @@ contract RegistrarController is Ownable {
 
     /// @notice The mapping of used signatures.
     mapping(bytes32 => bool) public usedSignatures;
+
+    /// @notice The mapping of mints count by round by address.
+    /// example: 0x123 => { 1st Round => 3 mints, 2nd Round => 1 mint }
+    mapping(address => mapping(uint256 => uint256)) public mintsCountByRoundByAddress;
 
     /// @notice The timestamp of "go-live". Used for setting at-launch pricing premium.
     uint256 public launchTime;
@@ -333,10 +350,10 @@ contract RegistrarController is Ownable {
     ///
     /// @param request The `RegisterRequest` struct containing the details for the registration.
     /// @param signature The signature of the whitelisted address.
-    function whitelistRegister(RegisterRequest calldata request, bytes calldata signature) public payable {
+    function whitelistRegister(WhitelistRegisterRequest calldata request, bytes calldata signature) public payable {
         _validateWhitelist(request, signature);
-        _validateRegistration(request);
-        _register(request);
+        _validateRegistration(request.registerRequest);
+        _register(request.registerRequest);
     }
 
     /// @notice Internal helper for registering a name.
@@ -393,7 +410,7 @@ contract RegistrarController is Ownable {
         if (request.owner != msg.sender && request.reverseRecord) revert CantSetReverseRecordForOthers();
     }
 
-    function _validateWhitelist(RegisterRequest calldata request, bytes calldata signature) internal {
+    function _validateWhitelist(WhitelistRegisterRequest calldata request, bytes calldata signature) internal {
         // Break signature into r, s, v
         bytes32 r;
         bytes32 s;
@@ -406,15 +423,26 @@ contract RegistrarController is Ownable {
         }
 
         // Encode payload - signature format: (address owner, address referrer, uint256 duration, string name)
-        bytes memory payload = abi.encode(request.owner, request.referrer, request.duration, request.name);
+        bytes memory payload = abi.encode(
+            request.registerRequest.owner,
+            request.registerRequest.referrer,
+            request.registerRequest.duration,
+            request.registerRequest.name,
+            request.round_id,
+            request.round_total_mint
+        );
 
         if (usedSignatures[keccak256(payload)]) revert SignatureAlreadyUsed();
+        if (mintsCountByRoundByAddress[msg.sender][request.round_id] >= request.round_total_mint) {
+            revert MintLimitForRoundReached();
+        }
 
         // Validate signature
         whitelistValidator.validateSignature(payload, v, r, s);
 
-        // Store the message hash in used signatures
+        // Store the message hash in used signatures and increment the mint count for the round
         usedSignatures[keccak256(payload)] = true;
+        mintsCountByRoundByAddress[msg.sender][request.round_id]++;
     }
 
     /// @notice Helper for deciding whether to include a launch-premium.

@@ -50,6 +50,8 @@ contract SystemTest is BaseTest {
 
     string public constant DEFAULT_NAME = "foo-bar";
     string public constant DEFAULT_NAME_WITH_BERA = "foo-bar.bera";
+    uint8 public constant DEFAULT_ROUND_ID = 1;
+    uint8 public constant DEFAULT_ROUND_TOTAL_MINT = 1;
 
     MockPyth pyth;
     bytes32 BERA_USD_PYTH_PRICE_FEED_ID = bytes32(uint256(0x1));
@@ -247,7 +249,7 @@ contract SystemTest is BaseTest {
         vm.deal(alice, 1000 ether);
 
         bytes memory signature = sign();
-        registrar.whitelistRegister{value: 500 ether}(defaultRequest(), signature);
+        registrar.whitelistRegister{value: 500 ether}(defaultWhitelistRequest(), signature);
 
         // Check the resolution
         bytes32 reverseNode = reverseRegistrar.node(alice);
@@ -527,6 +529,14 @@ contract SystemTest is BaseTest {
         return req;
     }
 
+    function defaultWhitelistRequest() internal view returns (RegistrarController.WhitelistRegisterRequest memory) {
+        return RegistrarController.WhitelistRegisterRequest({
+            registerRequest: defaultRequest(),
+            round_id: DEFAULT_ROUND_ID,
+            round_total_mint: DEFAULT_ROUND_TOTAL_MINT
+        });
+    }
+
     function setLaunchTimeInFuture() internal {
         vm.startPrank(registrarAdmin);
         registrar.setLaunchTime(block.timestamp + 10 days);
@@ -540,7 +550,8 @@ contract SystemTest is BaseTest {
     }
 
     function sign() internal view returns (bytes memory) {
-        bytes memory payload = abi.encode(alice, address(0), 365 days, DEFAULT_NAME);
+        bytes memory payload =
+            abi.encode(alice, address(0), 365 days, DEFAULT_NAME, DEFAULT_ROUND_ID, DEFAULT_ROUND_TOTAL_MINT);
         bytes32 hash =
             keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", abi.encodePacked(keccak256(payload))));
 
