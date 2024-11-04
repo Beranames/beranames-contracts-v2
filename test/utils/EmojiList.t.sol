@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 contract EmojiList {
-    string[3789] public emojis = [
+    string[] public emojis = [
         unicode"⌚",
         unicode"⌛",
         unicode"⏩",
