@@ -132,7 +132,7 @@ contract SystemTest is BaseTest {
 
         // Deploy the auction house
         auctionHouse = new BeraAuctionHouse(
-            baseRegistrar, resolver, IERC20(honey), IWETH(weth), 1 days, 365 days, 1 ether, 10 seconds, 1
+            baseRegistrar, resolver, IWETH(weth), 1 days, 365 days, 1 ether, 10 seconds, 1, address(registrarAdmin)
         );
         auctionHouse.transferOwnership(address(registrarAdmin));
         baseRegistrar.addController(address(auctionHouse));

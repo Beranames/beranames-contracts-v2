@@ -15,7 +15,6 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BaseRegistrar} from "src/registrar/types/BaseRegistrar.sol";
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IWETH} from "src/auction/interfaces/IWETH.sol";
 
 import {IBeraAuctionHouse} from "src/auction/interfaces/IBeraAuctionHouse.sol";
@@ -29,10 +28,8 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
     /// @notice The Registrar Controller that the auction uses to mint the names
     BaseRegistrar public immutable base;
 
+    /// @notice The resolver that the auction uses to resolve the names
     BeraDefaultResolver public immutable resolver;
-
-    /// @notice The address of the honey contract
-    IERC20 public immutable honey;
 
     /// @notice The address of the WETH contract
     IWETH public immutable weth;
@@ -56,25 +53,38 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
     /// @notice Past auction settlements
     mapping(uint256 => SettlementState) settlementHistory;
 
+    /// @notice The address that will receive funds after closing the auction
+    address public paymentReceiver;
+
+    /// Constructor ------------------------------------------------------
+
+    /// @notice Constructor for the auction house
+    /// @param base_ The base registrar contract
+    /// @param resolver_ The resolver contract
+    /// @param weth_ The WETH contract
+    /// @param auctionDuration_ The duration of the auction
+    /// @param registrationDuration_ The duration of the registration
+    /// @param reservePrice_ The reserve price of the auction
+    /// @param timeBuffer_ The time buffer of the auction
+    /// @param minBidIncrementPercentage_ The minimum bid increment percentage of the auction
+    /// @param paymentReceiver_ The address that will receive funds after closing the auction
     constructor(
         BaseRegistrar base_,
         BeraDefaultResolver resolver_,
-        IERC20 honey_,
         IWETH weth_,
         uint256 auctionDuration_,
         uint256 registrationDuration_,
         uint192 reservePrice_,
         uint56 timeBuffer_,
-        uint8 minBidIncrementPercentage_
+        uint8 minBidIncrementPercentage_,
+        address paymentReceiver_
     ) Ownable(msg.sender) {
         base = base_;
         resolver = resolver_;
-
-        honey = honey_;
         weth = weth_;
-
         auctionDuration = auctionDuration_;
         registrationDuration = registrationDuration_;
+        paymentReceiver = paymentReceiver_;
 
         _pause();
 
@@ -220,6 +230,17 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         emit AuctionMinBidIncrementPercentageUpdated(_minBidIncrementPercentage);
     }
 
+    /// @notice Allows the `owner` to set the reverse registrar contract.
+    ///
+    /// @dev Emits `PaymentReceiverUpdated` after setting the `paymentReceiver` address.
+    ///
+    /// @param paymentReceiver_ The new payment receiver address.
+    function setPaymentReceiver(address paymentReceiver_) external onlyOwner {
+        if (paymentReceiver_ == address(0)) revert InvalidPaymentReceiver();
+        paymentReceiver = paymentReceiver_;
+        emit PaymentReceiverUpdated(paymentReceiver_);
+    }
+
     /**
      * @notice Create an auction.
      * @dev Store the auction details in the `auction` state variable and emit an AuctionCreated event.
@@ -275,8 +296,8 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
             base.transferFrom(address(this), _auction.bidder, _auction.tokenId);
         }
 
-        if (_auction.amount > 0) {
-            _safeTransferETHWithFallback(owner(), _auction.amount); // TODO: change to beneficiary
+        if (_auction.amount > 0 && paymentReceiver != address(0)) {
+            _safeTransferETHWithFallback(paymentReceiver, _auction.amount);
         }
 
         SettlementState storage settlementState = settlementHistory[_auction.tokenId];

@@ -41,6 +41,9 @@ interface IBeraAuctionHouse {
     /// @notice Thrown when the start ID is too large.
     error StartIdTooLarge(uint256 startId);
 
+    /// @notice Thrown when the payment receiver is being set to address(0).
+    error InvalidPaymentReceiver();
+
     struct Auction {
         uint256 tokenId;
         uint128 amount;
@@ -106,6 +109,11 @@ interface IBeraAuctionHouse {
     event AuctionMinBidIncrementPercentageUpdated(uint256 minBidIncrementPercentage);
 
     event AuctionCreationError(string reason);
+
+    /// @notice Emitted when the payment receiver is updated.
+    ///
+    /// @param newPaymentReceiver The address of the new payment receiver.
+    event PaymentReceiverUpdated(address newPaymentReceiver);
 
     function settleAuction() external;
 
