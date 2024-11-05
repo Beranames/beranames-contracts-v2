@@ -60,6 +60,12 @@ contract RegistrarController is Ownable {
     /// @notice Thrown when a mint limit for a round is reached.
     error MintLimitForRoundReached();
 
+    /// @notice Thrown when someone tries to mint a reserved name but is not authorised
+    error NotAuthorisedToMintReservedNames();
+
+    /// @notice Thrown when the name is not reserved but you try to mint via reserved minting flow
+    error NameNotReserved();
+
     /// Events -----------------------------------------------------------
 
     /// @notice Emitted when an ETH payment was processed successfully.
@@ -114,6 +120,11 @@ contract RegistrarController is Ownable {
     ///
     /// @param newLaunchTime The new launch time.
     event LaunchTimeUpdated(uint256 newLaunchTime);
+
+    /// @notice Emitted when reserved names minter is changed
+    ///
+    /// @param newReservedNameMinterAddress the new address;
+    event ReservedNamesMinterChanged(address newReservedNameMinterAddress);
 
     /// Datastructures ---------------------------------------------------
 
@@ -188,6 +199,9 @@ contract RegistrarController is Ownable {
 
     /// @notice The minimum name length.
     uint256 public constant MIN_NAME_LENGTH = 1;
+
+    /// @notice The address of the reserved names minter.
+    address private reservedNamesMinter;
 
     /// Modifiers --------------------------------------------------------
 
@@ -368,6 +382,16 @@ contract RegistrarController is Ownable {
         _register(request.registerRequest);
     }
 
+    function reservedRegister(RegisterRequest calldata request) public {
+        if (msg.sender != reservedNamesMinter) {
+            revert NotAuthorisedToMintReservedNames();
+        }
+        if (!reservedRegistry.isReservedName(request.name)) revert NameNotReserved();
+
+        // Skip the _register because this mint is not payable, so no money sent
+        _registerRequest(request);
+    }
+
     /// @notice Internal helper for registering a name.
     ///
     /// @dev Validates the registration details via the `validRegistration` modifier.
@@ -539,5 +563,10 @@ contract RegistrarController is Ownable {
     /// @notice Allows the owner to recover ERC20 tokens sent to the contract by mistake.
     function recoverFunds(address _token, address _to, uint256 _amount) external onlyOwner {
         IERC20(_token).safeTransfer(_to, _amount);
+    }
+
+    function setReservedNamesMinter(address reservedNamesMinter_) external onlyOwner {
+        reservedNamesMinter = reservedNamesMinter_;
+        emit ReservedNamesMinterChanged(reservedNamesMinter);
     }
 }
