@@ -13,11 +13,12 @@ import {ReverseRegistrar} from "src/registrar/ReverseRegistrar.sol";
 import {BeraNamesRegistry} from "src/registry/Registry.sol";
 import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
 import {IAddrResolver} from "src/resolver/interfaces/IAddrResolver.sol";
+import {ITextResolver} from "src/resolver/interfaces/ITextResolver.sol";
 
 contract MintScript is Script {
     /// @dev
     /// 0. Make sure to have some BERA in your wallet
-    /// 1. change NAME_TO_MINT to the name you want to mint
+    /// 1. change NAME_TO_MINT to the name you want to mint and AVATAR_URL to the avatar you want to use
     /// 2. run script with the following command:
     /// forge script script/MintScript.s.sol:MintScript --rpc-url https://bartio.rpc.berachain.com/ --broadcast --private-key <your-private-key>
     /// or
@@ -25,7 +26,8 @@ contract MintScript is Script {
 
     /// if you want to mint a name with less than 5 characters, update the value of .register function call
 
-    string constant NAME_TO_MINT = "lethale4";
+    string constant NAME_TO_MINT = "lethaale";
+    string constant AVATAR_URL = "https://gravatar.com/avatar/2f24b170f96b293450485caa47806abb"; // this is a gravatar, but you can also use IPFS or any other URL
 
     // TODO: update these contract addresses
     address constant REGISTRAR_CONTROLLER_ADDRESS = 0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0;
@@ -65,6 +67,7 @@ contract MintScript is Script {
 
         bytes32 node_ = _calculateNode(keccak256(bytes(NAME_TO_MINT)), BERA_NODE);
         resolver.setAddr(node_, msg.sender);
+        resolver.setText(node_, "avatar", AVATAR_URL);
         // at this point, name is resolvable by Viem
     }
 
@@ -72,9 +75,13 @@ contract MintScript is Script {
         RegistrarController.RegisterRequest memory req = defaultRegisterRequest();
 
         bytes32 node_ = _calculateNode(keccak256(bytes(req.name)), BERA_NODE);
-        bytes memory payload = abi.encodeWithSignature("setAddr(bytes32,address)", node_, msg.sender);
-        bytes[] memory data = new bytes[](1);
-        data[0] = payload;
+        bytes memory addrPayload = abi.encodeWithSignature("setAddr(bytes32,address)", node_, msg.sender);
+        bytes memory avatarPayload =
+            abi.encodeWithSignature("setText(bytes32,string,string)", node_, "avatar", AVATAR_URL);
+
+        bytes[] memory data = new bytes[](2);
+        data[0] = addrPayload;
+        data[1] = avatarPayload;
         req.data = data;
 
         // mint the name - 👀 - check bartio price oracle for price or call registerPrice()
@@ -114,6 +121,15 @@ contract MintScript is Script {
             universalResolver.resolve(dnsEncName, abi.encodeWithSelector(IAddrResolver.addr.selector, node_));
         address addr = abi.decode(res_, (address));
         require(addr == msg.sender, "addr mismatch via universal resolver");
+
+        // 5. checking name => avatar resolution via reverseRegistrar
+        (res_,) =
+            universalResolver.resolve(dnsEncName, abi.encodeWithSelector(ITextResolver.text.selector, node_, "avatar"));
+        string memory resolvedAvatar = abi.decode(res_, (string));
+        require(
+            keccak256(abi.encodePacked(resolvedAvatar)) == keccak256(abi.encodePacked(AVATAR_URL)),
+            "avatar mismatch via reverse registrar"
+        );
     }
 
     function _calculateNode(bytes32 labelHash_, bytes32 parent_) internal pure returns (bytes32) {
