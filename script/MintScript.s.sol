@@ -20,6 +20,8 @@ contract MintScript is Script {
     /// 1. change NAME_TO_MINT to the name you want to mint
     /// 2. run script with the following command:
     /// forge script script/MintScript.s.sol:MintScript --rpc-url https://bartio.rpc.berachain.com/ --broadcast --private-key <your-private-key>
+    /// or
+    /// WALLET_DEV_PRIVATE_KEY=<your-private-key> make testnet--mint-name
 
     /// if you want to mint a name with less than 5 characters, update the value of .register function call
 
