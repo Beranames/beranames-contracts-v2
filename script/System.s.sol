@@ -120,10 +120,6 @@ contract ContractScript is Script {
         baseRegistrar.addController(address(registrar));
         resolver.setRegistrarController(address(registrar));
 
-        // Deploy the Universal Resovler
-        string[] memory urls = new string[](0);
-        universalResolver = new UniversalResolver(address(registry), urls);
-
         // Deploy the auction house
         auctionHouse = new BeraAuctionHouse(
             baseRegistrar,
@@ -141,6 +137,10 @@ contract ContractScript is Script {
 
         // TODO: Add test domains / initial mints here
         reservedRegistry.setReservedName("reserved");
+
+        // Deploy the Universal Resovler
+        string[] memory urls = new string[](0);
+        universalResolver = new UniversalResolver(address(registry), urls);
 
         // Transfer ownership to registrar admin
         // root node

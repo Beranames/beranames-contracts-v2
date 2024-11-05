@@ -1,9 +1,18 @@
 
-testnet--deploy-system: 
+testnet--deploy-system:
 	forge script script/System.s.sol:ContractScript \
 	--private-key ${WALLET_DEV_PRIVATE_KEY} \
 	--rpc-url "https://bartio.rpc.berachain.com" \
 	--broadcast -vvvvv
+
+testnet--deploy-and-verify-system:
+	forge script script/System.s.sol:ContractScript \
+	--private-key ${WALLET_DEV_PRIVATE_KEY} \
+	--broadcast --verify \
+	--rpc-url "https://bartio.rpc.berachain.com" \
+	--verifier-url "https://api.routescan.io/v2/network/testnet/evm/80084/etherscan" \
+	--etherscan-api-key "verifyContract" \
+	--gas-price 6000000000000
 
 testnet--mint-name:
 	forge script script/MintScript.s.sol:MintScript \

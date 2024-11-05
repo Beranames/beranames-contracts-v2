@@ -26,15 +26,15 @@ contract MintScript is Script {
 
     /// if you want to mint a name with less than 5 characters, update the value of .register function call
 
-    string constant NAME_TO_MINT = "lethaale";
+    string constant NAME_TO_MINT = "lethale";
     string constant AVATAR_URL = "https://gravatar.com/avatar/2f24b170f96b293450485caa47806abb"; // this is a gravatar, but you can also use IPFS or any other URL
 
     // TODO: update these contract addresses
-    address constant REGISTRAR_CONTROLLER_ADDRESS = 0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0;
-    address constant RESOLVER = 0x0165878A594ca255338adfa4d48449f69242Eb8F;
-    address constant REVERSE_REGISTRAR = 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0;
-    address constant REGISTRY = 0x5FbDB2315678afecb367f032d93F642f64180aa3;
-    address constant UNIVERSAL_RESOLVER = 0x0B306BF915C4d645ff596e518fAf3F9669b97016;
+    address constant REGISTRAR_CONTROLLER_ADDRESS = 0xad8a98885bAdAD04FFf68e519d3AcaB5Bd93f77c;
+    address constant RESOLVER = 0xa83d70Ab11a4ADc8D03F4693D82D787A46Ed0a2c;
+    address constant REVERSE_REGISTRAR = 0x2Fd452382ACC016F3aF3B082C3a8d6Cb73c9ec08;
+    address constant REGISTRY = 0x4b5d3dB6b519244aE78D58de3F98B4D729685A0e;
+    address constant UNIVERSAL_RESOLVER = 0x7bBcC659feEC3a9A05766c5Cf43D08C0a64c721F;
 
     RegistrarController registrar;
     BeraDefaultResolver resolver;
