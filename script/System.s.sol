@@ -60,8 +60,8 @@ contract ContractScript is Script {
             registry,
             address(deployer),
             BERA_NODE,
-            "https://www.beranames.com/metadata/berachain-testnet-b-artio/", // bartio-testnet
-            "https://www.beranames.com/metadata/berachain-testnet-b-artio/collection" // bartio-testnet collection
+            "https://beranames-v3.vercel.app/metadata/berachain-testnet-b-artio/", // bartio-testnet
+            "https://beranames-v3.vercel.app/metadata/berachain-testnet-b-artio/collection" // bartio-testnet collection
                 // "https://www.beranames.com/metadata/berachain-mainnet/", // berachain-mainnet
                 // "https://www.beranames.com/metadata/berachain-mainnet/collection" // berachain-mainnet collection
         );
@@ -125,11 +125,10 @@ contract ContractScript is Script {
         universalResolver = new UniversalResolver(address(registry), urls);
 
         // Deploy the auction house
-        // TODO: update honey and weth addresses
         auctionHouse = new BeraAuctionHouse(
             baseRegistrar,
             resolver,
-            IWETH(address(0)),
+            IWETH(0x7507c1dc16935B82698e4C63f2746A2fCf994dF8),
             1 days,
             365 days,
             1 ether,
@@ -141,6 +140,7 @@ contract ContractScript is Script {
         baseRegistrar.addController(address(auctionHouse));
 
         // TODO: Add test domains / initial mints here
+        reservedRegistry.setReservedName("reserved");
 
         // Transfer ownership to registrar admin
         // root node
