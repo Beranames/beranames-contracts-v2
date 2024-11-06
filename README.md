@@ -1,8 +1,8 @@
 # Beranames Name Service (BNS)
 
-Beranames Name Service (BNS) is a decentralized and secure naming service built on the Berachain blockchain 🐻⛓.
+Beranames Name Service (BNS) is a decentralized and secure name service built for the Berachain blockchain 🐻⛓.
 
-This project is a fork of the Ethereum Name Service (ENS) protocol, designed to provide decentralized domain name registration and resolution on the 🐻⛓ blockchain. By leveraging the robust architecture of ENS, this fork introduces customized functionalities while maintaining compatibility with existing ENS standards.
+This project is based on the Ethereum Name Service (ENS) protocol, designed to provide decentralized domain name registration and resolution on the 🐻⛓ blockchain. By leveraging the robust architecture of ENS, this fork introduces customized functionalities while maintaining compatibility with existing ENS standards.
 
 ## Specifications
 
