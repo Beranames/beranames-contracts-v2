@@ -321,6 +321,12 @@ contract BaseRegistrar is ERC721, Ownable {
         emit ContractURIUpdated();
     }
 
+    /// @notice transferFrom is overridden to handle the registry update.
+    function transferFrom(address from, address to, uint256 tokenId) public override {
+        super.transferFrom(from, to, tokenId);
+        registry.setSubnodeOwner(baseNode, bytes32(tokenId), to);
+    }
+
     /// Internal Methods -------------------------------------------------
 
     /// @notice Register a name and possibly update the Registry.
