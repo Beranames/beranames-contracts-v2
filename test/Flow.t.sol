@@ -397,6 +397,28 @@ contract FlowTest is BaseTest {
         assertEq(text, "_cien_", "text record set and resolved");
     }
 
+    // ERC721 TESTS ------------------------------------------------------------------------------------------------------
+
+    function test_ERC721_transferFrom_updates_registry() public prank(alice) {
+        bytes32 node = registerAndSetAddr(alice);
+        baseRegistrar.transferFrom(alice, bob, uint256(keccak256(bytes("cien"))));
+        assertEq(baseRegistrar.ownerOf(uint256(keccak256(bytes("cien")))), address(bob), "token owner is bob");
+        assertEq(registry.owner(node), address(bob), "registry owner is bob");
+    }
+
+    function test_ERC721_transferFrom_allows_new_owner_to_set_record_without_explicit_reclaim() public {
+        vm.startPrank(alice);
+        bytes32 node = registerAndSetAddr(alice);
+        baseRegistrar.transferFrom(alice, bob, uint256(keccak256(bytes("cien"))));
+        vm.stopPrank();
+        vm.startPrank(bob);
+        resolver.setAddr(node, address(bob));
+        resolver.setText(node, "com.discord", "_cien_");
+        assertEq(resolver.addr(node), address(bob), "addr is bob");
+        assertEq(resolver.text(node, "com.discord"), "_cien_", "text record set");
+        vm.stopPrank();
+    }
+
     // UTILITIES ----------------------------------------------------------------------------------------------------------
 
     /// @notice Calculate the node for a given label and parent
