@@ -141,11 +141,12 @@ contract SystemTest is BaseTest {
         // root node
         registry.setOwner(bytes32(0), address(registrarAdmin));
         baseRegistrar.transferOwnership(address(registrarAdmin));
+        universalResolver.transferOwnership(address(registrarAdmin));
 
         // admin control
         reverseRegistrar.setController(address(registrarAdmin), true);
         reverseRegistrar.setController(address(registrar), true);
-        reverseRegistrar.transferOwnership(address(registrar));
+        reverseRegistrar.transferOwnership(address(registrarAdmin));
         resolver.transferOwnership(address(registrarAdmin));
 
         // Stop pranking
@@ -186,10 +187,13 @@ contract SystemTest is BaseTest {
         assertEq(registry.owner(ADDR_REVERSE_NODE), address(reverseRegistrar), "ADDR_REVERSE_NODE owner");
         assertEq(registry.resolver(BERA_NODE), address(resolver), "BERA_NODE resolver");
         assertEq(registry.resolver(ADDR_REVERSE_NODE), address(0), "ADDR_REVERSE_NODE resolver");
+
+        // check ownership
         assertEq(baseRegistrar.owner(), address(registrarAdmin), "baseRegistrar owner");
-        assertEq(reverseRegistrar.owner(), address(registrar), "reverseRegistrar owner");
-        assertEq(address(resolver.owner()), address(registrarAdmin), "resolver owner");
-        assertEq(address(auctionHouse.owner()), address(registrarAdmin), "auctionHouse owner");
+        assertEq(universalResolver.owner(), address(registrarAdmin), "universalResolver owner");
+        assertEq(reverseRegistrar.owner(), address(registrarAdmin), "reverseRegistrar owner");
+        assertEq(resolver.owner(), address(registrarAdmin), "resolver owner");
+        assertEq(auctionHouse.owner(), address(registrarAdmin), "auctionHouse owner");
     }
 
     function test_basic_success_and_resolution() public {
