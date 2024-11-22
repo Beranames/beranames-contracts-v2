@@ -146,6 +146,7 @@ contract SystemTest is BaseTest {
         // admin control
         reverseRegistrar.setController(address(registrarAdmin), true);
         reverseRegistrar.setController(address(registrar), true);
+        reverseRegistrar.setDefaultResolver(address(resolver));
         reverseRegistrar.transferOwnership(address(registrarAdmin));
         resolver.transferOwnership(address(registrarAdmin));
 
@@ -183,6 +184,7 @@ contract SystemTest is BaseTest {
     }
 
     function test_initialized() public view {
+        // registry ownership and resolvers
         assertEq(registry.owner(BERA_NODE), address(baseRegistrar), "BERA_NODE owner");
         assertEq(registry.owner(ADDR_REVERSE_NODE), address(reverseRegistrar), "ADDR_REVERSE_NODE owner");
         assertEq(registry.resolver(BERA_NODE), address(resolver), "BERA_NODE resolver");
@@ -194,6 +196,10 @@ contract SystemTest is BaseTest {
         assertEq(reverseRegistrar.owner(), address(registrarAdmin), "reverseRegistrar owner");
         assertEq(resolver.owner(), address(registrarAdmin), "resolver owner");
         assertEq(auctionHouse.owner(), address(registrarAdmin), "auctionHouse owner");
+
+        // check reverse registrar
+        assertEq(address(reverseRegistrar.registry()), address(registry), "reverseRegistrar registry");
+        assertEq(address(reverseRegistrar.defaultResolver()), address(resolver), "reverseRegistrar defaultResolver");
     }
 
     function test_basic_success_and_resolution() public {
