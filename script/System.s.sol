@@ -151,6 +151,7 @@ contract ContractScript is Script {
         // admin control
         reverseRegistrar.setController(address(registrarAdmin), true);
         reverseRegistrar.setController(address(registrar), true);
+        reverseRegistrar.setDefaultResolver(address(resolver));
         reverseRegistrar.transferOwnership(address(registrarAdmin));
         resolver.transferOwnership(address(registrarAdmin));
 
