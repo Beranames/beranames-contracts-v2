@@ -392,8 +392,15 @@ contract RegistrarController is Ownable {
     ///
     /// @param request The `RegisterRequest` struct containing the details for the registration.
     /// @param signature The signature of the whitelisted address.
-    function whitelistFreeRegister(RegisterRequest calldata request, bytes calldata signature) public {
+    function whitelistFreeRegister(RegisterRequest calldata request, bytes calldata signature)
+        public
+        validRegistration(request)
+    {
         _validateFreeWhitelist(request.owner, signature);
+
+        uint256 strlen = request.name.strlen();
+        if (strlen < 3) revert NameNotAvailable(request.name);
+
         _validateRegistration(request);
         _registerRequest(request);
     }
@@ -404,7 +411,7 @@ contract RegistrarController is Ownable {
     /// @dev Calls the _registerRequest directly because it's not payable, so we don't need to validate payment
     ///
     /// @param request The `RegisterRequest` struct containing the details for the registration.
-    function reservedRegister(RegisterRequest calldata request) public {
+    function reservedRegister(RegisterRequest calldata request) public validRegistration(request) {
         if (msg.sender != reservedNamesMinter) {
             revert NotAuthorisedToMintReservedNames();
         }

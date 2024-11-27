@@ -17,7 +17,7 @@ contract FreeWhitelistRegistrarTest is SystemTest {
         vm.startPrank(alice);
         deal(address(alice), 1000 ether);
 
-        string memory nameToMint = unicode"alice🐻‍❄️-free-whitelisted";
+        string memory nameToMint = "s"; // short name
         RegistrarController.RegisterRequest memory request = RegistrarController.RegisterRequest({
             name: nameToMint,
             owner: alice,
@@ -37,33 +37,20 @@ contract FreeWhitelistRegistrarTest is SystemTest {
 
         bytes memory signature = abi.encodePacked(r, s, v);
 
+        vm.expectRevert(abi.encodeWithSelector(RegistrarController.NameNotAvailable.selector, nameToMint));
         registrar.whitelistFreeRegister(request, signature);
 
-        assertEq(baseRegistrar.ownerOf(uint256(keccak256(bytes(nameToMint)))), alice);
+        request.name = unicode"alice🐻‍❄️-free-whitelisted";
+        registrar.whitelistFreeRegister(request, signature);
+        assertEq(baseRegistrar.ownerOf(uint256(keccak256(bytes(request.name)))), alice);
 
         // second time fails because the signature has already been used
+        request.name = unicode"alice🐻‍❄️-free-whitelisted2";
         vm.expectRevert(abi.encodeWithSelector(RegistrarController.FreeMintSignatureAlreadyUsed.selector));
         registrar.whitelistFreeRegister(request, signature);
 
         // also if you change the name, it fails, because signature is used
-        request = RegistrarController.RegisterRequest({
-            name: "foooooobar",
-            owner: alice,
-            duration: 365 days,
-            resolver: address(resolver),
-            data: new bytes[](0),
-            reverseRecord: true,
-            referrer: address(0)
-        });
-        payload = abi.encode(request.owner);
-        payloadHash = keccak256(payload);
-        prefix = "\x19Ethereum Signed Message:\n32";
-        prefixedHash = keccak256(abi.encodePacked(prefix, payloadHash));
-
-        (v, r, s) = vm.sign(signerPk, prefixedHash);
-
-        signature = abi.encodePacked(r, s, v);
-
+        request.name = "foooooobar";
         vm.expectRevert(abi.encodeWithSelector(RegistrarController.FreeMintSignatureAlreadyUsed.selector));
         registrar.whitelistFreeRegister(request, signature);
     }
