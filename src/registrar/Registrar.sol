@@ -66,6 +66,9 @@ contract RegistrarController is Ownable {
     /// @notice Thrown when the name is not reserved but you try to mint via reserved minting flow
     error NameNotReserved();
 
+    /// @notice Thrown when a free mint signature has already been used.
+    error FreeMintSignatureAlreadyUsed();
+
     /// Events -----------------------------------------------------------
 
     /// @notice Emitted when an ETH payment was processed successfully.
@@ -184,6 +187,9 @@ contract RegistrarController is Ownable {
 
     /// @notice The mapping of used signatures.
     mapping(bytes32 => bool) public usedSignatures;
+
+    /// @notice The mapping of used free mints signatures.
+    mapping(bytes32 => bool) public usedFreeMintsSignatures;
 
     /// @notice The mapping of mints count by round by address.
     /// example: 0x123 => { 1st Round => 3 mints, 2nd Round => 1 mint }
@@ -382,13 +388,35 @@ contract RegistrarController is Ownable {
         _register(request.registerRequest);
     }
 
-    function reservedRegister(RegisterRequest calldata request) public {
+    /// @notice Allows a whitelisted address to register a name for free
+    ///
+    /// @param request The `RegisterRequest` struct containing the details for the registration.
+    /// @param signature The signature of the whitelisted address.
+    function whitelistFreeRegister(RegisterRequest calldata request, bytes calldata signature)
+        public
+        validRegistration(request)
+    {
+        _validateFreeWhitelist(request.owner, signature);
+
+        uint256 strlen = request.name.strlen();
+        if (strlen < 3) revert NameNotAvailable(request.name);
+
+        _validateRegistration(request);
+        _registerRequest(request);
+    }
+
+    /// @notice Allows the reserved names minter to register a reserved name.
+    ///
+    /// @dev Skips the _validateRegistration because it's callable only by reservedNamesMinter
+    /// @dev Calls the _registerRequest directly because it's not payable, so we don't need to validate payment
+    ///
+    /// @param request The `RegisterRequest` struct containing the details for the registration.
+    function reservedRegister(RegisterRequest calldata request) public validRegistration(request) {
         if (msg.sender != reservedNamesMinter) {
             revert NotAuthorisedToMintReservedNames();
         }
         if (!reservedRegistry.isReservedName(request.name)) revert NameNotReserved();
 
-        // Skip the _register because this mint is not payable, so no money sent
         _registerRequest(request);
     }
 
@@ -447,16 +475,7 @@ contract RegistrarController is Ownable {
     }
 
     function _validateWhitelist(WhitelistRegisterRequest calldata request, bytes calldata signature) internal {
-        // Break signature into r, s, v
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-        // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/ECDSA.sol#L66-L70
-        assembly {
-            r := calldataload(signature.offset)
-            s := calldataload(add(signature.offset, 32))
-            v := byte(0, calldataload(add(signature.offset, 64)))
-        }
+        (bytes32 r, bytes32 s, uint8 v) = unpackSignature(signature);
 
         // Encode payload - signature format: (address owner, address referrer, uint256 duration, string name)
         bytes memory payload = abi.encode(
@@ -479,6 +498,28 @@ contract RegistrarController is Ownable {
         // Store the message hash in used signatures and increment the mint count for the round
         usedSignatures[keccak256(payload)] = true;
         mintsCountByRoundByAddress[msg.sender][request.round_id]++;
+    }
+
+    function _validateFreeWhitelist(address owner, bytes calldata signature) internal {
+        (bytes32 r, bytes32 s, uint8 v) = unpackSignature(signature);
+
+        bytes memory payload = abi.encode(owner);
+        if (usedFreeMintsSignatures[keccak256(payload)]) revert FreeMintSignatureAlreadyUsed();
+
+        whitelistValidator.validateSignature(payload, v, r, s);
+
+        usedFreeMintsSignatures[keccak256(payload)] = true;
+    }
+
+    function unpackSignature(bytes calldata signature) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
+        // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/ECDSA.sol#L66-L70
+        assembly {
+            r := calldataload(signature.offset)
+            s := calldataload(add(signature.offset, 32))
+            v := byte(0, calldataload(add(signature.offset, 64)))
+        }
+
+        return (r, s, v);
     }
 
     /// @notice Helper for deciding whether to include a launch-premium.
