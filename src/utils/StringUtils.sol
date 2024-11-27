@@ -135,6 +135,15 @@ library StringUtils {
             }
         }
 
+        // Checks if the character at index is a Tag Indicator (used in special flag sequences)
+        if (
+            b == 0xF3 && index + 2 < strBytes.length &&
+            strBytes[index + 1] == 0xA0 && 
+            strBytes[index + 2] >= 0x80 && strBytes[index + 2] <= 0x9F
+        ) {
+            return true;
+        }
+
         return false;
     }
 

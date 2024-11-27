@@ -1,0 +1,22 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@pythnetwork/pyth-sdk-solidity':
+        specifier: ^4.0.0
+        version: 4.0.0
+
+packages:
+
+  '@pythnetwork/pyth-sdk-solidity@4.0.0':
+    resolution: {integrity: sha512-Cy2MvSN1Oh5YpIYmZd2In6/gfXbGjnpazmXKioTuq07Drp4Rl2XHcvtqHdgilplCl32IG4pU+XoRafpexID08A==}
+
+snapshots:
+
+  '@pythnetwork/pyth-sdk-solidity@4.0.0': {}
