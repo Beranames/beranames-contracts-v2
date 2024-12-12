@@ -88,6 +88,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
 
         _pause();
 
+        if (reservePrice_ == 0) revert InvalidReservePrice();
         reservePrice = reservePrice_;
         timeBuffer = timeBuffer_;
         minBidIncrementPercentage = minBidIncrementPercentage_;
@@ -211,6 +212,9 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * @dev Only callable by the owner.
      */
     function setReservePrice(uint192 _reservePrice) external override onlyOwner {
+        if (_reservePrice == 0) {
+            revert InvalidReservePrice();
+        }
         reservePrice = _reservePrice;
 
         emit AuctionReservePriceUpdated(_reservePrice);
