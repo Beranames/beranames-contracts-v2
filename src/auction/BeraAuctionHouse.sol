@@ -325,6 +325,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
             weth.deposit{value: amount}();
             weth.transfer(to, amount);
         }
+        emit ETHPaymentProcessed(msg.sender, to, amount);
     }
 
     /**
