@@ -69,6 +69,9 @@ contract RegistrarController is Ownable {
     /// @notice Thrown when a free mint signature has already been used.
     error FreeMintSignatureAlreadyUsed();
 
+    /// @notice Thrown when the launch time is in the past.
+    error LaunchTimeInPast();
+
     /// Events -----------------------------------------------------------
 
     /// @notice Emitted when an ETH payment was processed successfully.
@@ -301,6 +304,10 @@ contract RegistrarController is Ownable {
     ///
     /// @param launchTime_ The new launch time timestamp.
     function setLaunchTime(uint256 launchTime_) external onlyOwner {
+        if (launchTime_ < block.timestamp) {
+            revert LaunchTimeInPast();
+        }
+
         launchTime = launchTime_;
         emit LaunchTimeUpdated(launchTime_);
     }
