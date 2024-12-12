@@ -144,7 +144,7 @@ contract RegistrarTest is SystemTest {
 
     function test__valid__failure_all_emojis() public {
         EmojiList emojiList = new EmojiList();
-        for (uint256 i = 0; i < emojiList.emojisLength(); i++) {
+        for (uint256 i = 0; i < emojiList.emojisLength(); ++i) {
             string memory emoji = emojiList.emojis(i);
             bool isValid = registrar.valid(emoji);
             assertFalse(isValid, string(abi.encodePacked("Emoji: ", emoji, " should be invalid")));

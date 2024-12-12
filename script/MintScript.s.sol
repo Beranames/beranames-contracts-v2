@@ -147,7 +147,7 @@ contract MintScript is Script {
         bytes memory hexString = new bytes(40); // 20 bytes address * 2 characters per byte
         bytes memory hexSymbols = "0123456789abcdef"; // Hexadecimal symbols
 
-        for (uint256 i = 0; i < 20; i++) {
+        for (uint256 i = 0; i < 20; ++i) {
             hexString[i * 2] = hexSymbols[uint8(addressBytes[i] >> 4)]; // Higher nibble (first half) shift right
             hexString[i * 2 + 1] = hexSymbols[uint8(addressBytes[i] & 0x0f)]; // Lower nibble (second half) bitwise AND
         }

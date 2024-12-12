@@ -238,7 +238,7 @@ contract UniversalResolver is ERC165, Ownable {
         multicallData.data = new bytes[](extraDatas.length);
         multicallData.failures = new bool[](extraDatas.length);
         uint256 offchainCount = 0;
-        for (uint256 i = 0; i < extraDatas.length; i++) {
+        for (uint256 i = 0; i < extraDatas.length; ++i) {
             if (extraDatas[i].callbackFunction == bytes4(0)) {
                 // This call did not require an offchain lookup; use the previous input data.
                 multicallData.data[i] = extraDatas[i].data;
@@ -367,7 +367,7 @@ contract UniversalResolver is ERC165, Ownable {
             revert ResolverWildcardNotSupported();
         }
 
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length; ++i) {
             bytes memory item = multicallData.data[i];
             bool failure = multicallData.failures[i];
             if (failure) {
