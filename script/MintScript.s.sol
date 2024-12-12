@@ -65,7 +65,7 @@ contract MintScript is Script {
         registrar.register{value: 1 ether}(req);
         // at this point, name is minted but not resolvable by Viem
 
-        bytes32 node_ = _calculateNode(keccak256(bytes(NAME_TO_MINT)), BERA_NODE);
+        bytes32 node_ = _calculateNode(keccak256(abi.encodePacked(NAME_TO_MINT)), BERA_NODE);
         resolver.setAddr(node_, msg.sender);
         resolver.setText(node_, "avatar", AVATAR_URL);
         // at this point, name is resolvable by Viem
@@ -74,7 +74,7 @@ contract MintScript is Script {
     function mintWithData() public {
         RegistrarController.RegisterRequest memory req = defaultRegisterRequest();
 
-        bytes32 node_ = _calculateNode(keccak256(bytes(req.name)), BERA_NODE);
+        bytes32 node_ = _calculateNode(keccak256(abi.encodePacked(req.name)), BERA_NODE);
         bytes memory addrPayload = abi.encodeWithSignature("setAddr(bytes32,address)", node_, msg.sender);
         bytes memory avatarPayload =
             abi.encodeWithSignature("setText(bytes32,string,string)", node_, "avatar", AVATAR_URL);
@@ -90,7 +90,7 @@ contract MintScript is Script {
     }
 
     function verifyMint() public view {
-        bytes32 node_ = _calculateNode(keccak256(bytes(NAME_TO_MINT)), BERA_NODE);
+        bytes32 node_ = _calculateNode(keccak256(abi.encodePacked(NAME_TO_MINT)), BERA_NODE);
 
         // 1. checking address => name resolution via reverseRegistrar - not really used because it needs 2 rpc calls
         bytes32 reverseNode = reverseRegistrar.node(msg.sender);

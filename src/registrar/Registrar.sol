@@ -345,7 +345,7 @@ contract RegistrarController is Ownable {
     ///
     /// @return `true` if the name is `valid` and available on the `base` registrar, else `false`.
     function available(string memory name) public view returns (bool) {
-        bytes32 label = keccak256(bytes(name));
+        bytes32 label = keccak256(abi.encodePacked(name));
         return valid(name) && base.isAvailable(uint256(label));
     }
 
@@ -356,7 +356,7 @@ contract RegistrarController is Ownable {
     ///
     /// @return price The `Price` tuple containing the base and premium prices respectively, denominated in wei.
     function rentPrice(string memory name, uint256 duration) public view returns (IPriceOracle.Price memory price) {
-        bytes32 label = keccak256(bytes(name));
+        bytes32 label = keccak256(abi.encodePacked(name));
         price = prices.price(name, _getExpiry(uint256(label)), duration);
     }
 
@@ -451,7 +451,7 @@ contract RegistrarController is Ownable {
     /// @param name The name that is being renewed.
     /// @param duration The duration to extend the expiry, in seconds.
     function renew(string calldata name, uint256 duration) external payable {
-        bytes32 labelhash = keccak256(bytes(name));
+        bytes32 labelhash = keccak256(abi.encodePacked(name));
         uint256 tokenId = uint256(labelhash);
         IPriceOracle.Price memory price = rentPrice(name, duration);
 
@@ -554,11 +554,11 @@ contract RegistrarController is Ownable {
     /// @param request The `RegisterRequest` struct containing the details for the registration.
     function _registerRequest(RegisterRequest calldata request) internal {
         uint256 expires = base.registerWithRecord(
-            uint256(keccak256(bytes(request.name))), request.owner, request.duration, request.resolver, 0
+            uint256(keccak256(abi.encodePacked(request.name))), request.owner, request.duration, request.resolver, 0
         );
 
         if (request.data.length > 0) {
-            _setRecords(request.resolver, keccak256(bytes(request.name)), request.data);
+            _setRecords(request.resolver, keccak256(abi.encodePacked(request.name)), request.data);
         }
 
         if (request.reverseRecord) {
@@ -566,10 +566,10 @@ contract RegistrarController is Ownable {
         }
 
         // two different events for ENS compatibility
-        emit NameRegistered(request.name, keccak256(bytes(request.name)), request.owner, expires);
+        emit NameRegistered(request.name, keccak256(abi.encodePacked(request.name)), request.owner, expires);
         if (request.referrer != address(0)) {
             emit NameRegisteredWithReferral(
-                request.name, keccak256(bytes(request.name)), request.owner, request.referrer, expires
+                request.name, keccak256(abi.encodePacked(request.name)), request.owner, request.referrer, expires
             );
         }
     }

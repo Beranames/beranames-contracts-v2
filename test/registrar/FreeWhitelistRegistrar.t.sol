@@ -42,7 +42,7 @@ contract FreeWhitelistRegistrarTest is SystemTest {
 
         request.name = unicode"alice🐻‍❄️-free-whitelisted";
         registrar.whitelistFreeRegister(request, signature);
-        assertEq(baseRegistrar.ownerOf(uint256(keccak256(bytes(request.name)))), alice);
+        assertEq(baseRegistrar.ownerOf(uint256(keccak256(abi.encodePacked(request.name)))), alice);
 
         // second time fails because the signature has already been used
         request.name = unicode"alice🐻‍❄️-free-whitelisted2";
