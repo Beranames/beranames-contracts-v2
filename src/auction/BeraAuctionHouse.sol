@@ -90,6 +90,9 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
 
         if (reservePrice_ == 0) revert InvalidReservePrice();
         if (minBidIncrementPercentage_ == 0) revert MinBidIncrementPercentageIsZero();
+        if (timeBuffer_ > MAX_TIME_BUFFER) {
+            revert TimeBufferTooLarge(timeBuffer_);
+        }
 
         reservePrice = reservePrice_;
         timeBuffer = timeBuffer_;
