@@ -383,6 +383,6 @@ contract BaseRegistrar is ERC721, Ownable {
         returns (bool)
     {
         address owner_ = _ownerOf(tokenId);
-        return owner_ == spender || _isAuthorized(owner_, spender, tokenId);
+        return _isAuthorized(owner_, spender, tokenId);
     }
 }
