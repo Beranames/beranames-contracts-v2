@@ -254,4 +254,17 @@ contract PriceOracleTest is Test {
         vm.expectRevert(abi.encodeWithSelector(PriceOracle.PriceTooLow.selector));
         priceOracle.price("a", 0, 365 days * 2, IPriceOracle.Payment.BERA);
     }
+
+    function test_register_price_for_2_years_minus_1_day() public {
+        setBeraPrice(1);
+
+        uint256 duration = 365 days * 2 - 1 days;
+
+        IPriceOracle.Price memory price = priceOracle.price("more_than_5_chars", 0, duration, IPriceOracle.Payment.BERA);
+
+        uint256 expectedBase = (25_00_0000 * duration / 365 days);
+        uint256 expectedDiscount = (expectedBase * 5) / 100;
+        assertEq(price.base, expectedBase * 10 ** 12);
+        assertEq(price.discount, expectedDiscount * 10 ** 12);
+    }
 }
