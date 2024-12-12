@@ -49,6 +49,9 @@ contract BaseRegistrar is ERC721, Ownable {
     /// @notice Thrown when this contract does not own the `baseNode`.
     error RegistrarNotLive();
 
+    /// @notice Thrown when the registry is being set to address(0).
+    error InvalidRegistry();
+
     /// Events -----------------------------------------------------------
 
     /// @notice Emitted when a Controller is added to the approved `controllers` mapping.
@@ -166,7 +169,7 @@ contract BaseRegistrar is ERC721, Ownable {
         ERC721("Beranames", unicode"🐻🪪")
         Ownable(owner_)
     {
-        _transferOwnership(owner_);
+        if (address(registry_) == address(0)) revert InvalidRegistry();
         registry = registry_;
         baseNode = baseNode_;
         _tokenURI = tokenURI_;

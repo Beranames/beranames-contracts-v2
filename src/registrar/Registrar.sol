@@ -72,6 +72,24 @@ contract RegistrarController is Ownable {
     /// @notice Thrown when the launch time is in the past.
     error LaunchTimeInPast();
 
+    /// @notice Thrown when the price oracle is being set to address(0).
+    error InvalidPriceOracle();
+
+    /// @notice Thrown when the reverse registrar is being set to address(0).
+    error InvalidReverseRegistrar();
+
+    /// @notice Thrown when the whitelist validator is being set to address(0).
+    error InvalidWhitelistValidator();
+
+    /// @notice Thrown when the reserved registry is being set to address(0).
+    error InvalidReservedRegistry();
+
+    /// @notice Thrown when the base registrar is being set to address(0).
+    error InvalidBaseRegistrar();
+
+    /// @notice Thrown when the reserved names minter is being set to address(0).
+    error InvalidReservedNamesMinter();
+
     /// Events -----------------------------------------------------------
 
     /// @notice Emitted when an ETH payment was processed successfully.
@@ -267,14 +285,22 @@ contract RegistrarController is Ownable {
         string memory rootName_,
         address paymentReceiver_
     ) Ownable(owner_) {
+        if (address(base_) == address(0)) revert InvalidBaseRegistrar();
         base = base_;
+        if (address(prices_) == address(0)) revert InvalidPriceOracle();
         prices = prices_;
+        if (address(reverseRegistrar_) == address(0)) revert InvalidReverseRegistrar();
         reverseRegistrar = reverseRegistrar_;
+        if (paymentReceiver_ == address(0)) revert InvalidPaymentReceiver();
+        paymentReceiver = paymentReceiver_;
+        if (address(whitelistValidator_) == address(0)) revert InvalidWhitelistValidator();
+        whitelistValidator = whitelistValidator_;
+        if (address(reservedRegistry_) == address(0)) revert InvalidReservedRegistry();
+        reservedRegistry = reservedRegistry_;
+
         rootNode = rootNode_;
         rootName = rootName_;
-        paymentReceiver = paymentReceiver_;
-        whitelistValidator = whitelistValidator_;
-        reservedRegistry = reservedRegistry_;
+
         reverseRegistrar.claim(owner_);
     }
 
@@ -286,6 +312,8 @@ contract RegistrarController is Ownable {
     ///
     /// @param prices_ The new pricing oracle.
     function setPriceOracle(IPriceOracle prices_) external onlyOwner {
+        if (address(prices_) == address(0)) revert InvalidPriceOracle();
+
         prices = prices_;
         emit PriceOracleUpdated(address(prices_));
     }
@@ -296,6 +324,8 @@ contract RegistrarController is Ownable {
     ///
     /// @param reverse_ The new reverse registrar contract.
     function setReverseRegistrar(IReverseRegistrar reverse_) external onlyOwner {
+        if (address(reverse_) == address(0)) revert InvalidReverseRegistrar();
+
         reverseRegistrar = reverse_;
         emit ReverseRegistrarUpdated(address(reverse_));
     }
@@ -319,6 +349,7 @@ contract RegistrarController is Ownable {
     /// @param paymentReceiver_ The new payment receiver address.
     function setPaymentReceiver(address paymentReceiver_) external onlyOwner {
         if (paymentReceiver_ == address(0)) revert InvalidPaymentReceiver();
+
         paymentReceiver = paymentReceiver_;
         emit PaymentReceiverUpdated(paymentReceiver_);
     }
@@ -614,6 +645,8 @@ contract RegistrarController is Ownable {
     }
 
     function setReservedNamesMinter(address reservedNamesMinter_) external onlyOwner {
+        if (reservedNamesMinter_ == address(0)) revert InvalidReservedNamesMinter();
+
         reservedNamesMinter = reservedNamesMinter_;
         emit ReservedNamesMinterChanged(reservedNamesMinter);
     }

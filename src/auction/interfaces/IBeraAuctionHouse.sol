@@ -47,6 +47,15 @@ interface IBeraAuctionHouse {
     /// @notice Thrown when the reserve price is being set to 0.
     error InvalidReservePrice();
 
+    /// @notice Thrown when the base registrar is being set to address(0).
+    error InvalidBaseRegistrar();
+
+    /// @notice Thrown when the resolver is being set to address(0).
+    error InvalidResolver();
+
+    /// @notice Thrown when the WETH is being set to address(0).
+    error InvalidWETH();
+
     struct Auction {
         uint256 tokenId;
         uint128 amount;
