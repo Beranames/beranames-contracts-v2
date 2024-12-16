@@ -15,6 +15,9 @@ contract ReservedRegistry is Ownable, IReservedRegistry {
     /// @dev Thrown when a name is already reserved.
     error NameAlreadyReserved(string name);
 
+    /// @dev Thrown when the index is out of bounds.
+    error IndexOutOfBounds();
+
     /// State ------------------------------------------------------------
 
     mapping(bytes32 => string) private _reservedNames;
@@ -45,6 +48,8 @@ contract ReservedRegistry is Ownable, IReservedRegistry {
     /// @param index_ The index of the reserved name to remove.
     /// @dev After deleting the name, we swap the last element in the array with the one we are deleting to avoid re-indexing.
     function removeReservedName(uint256 index_) public onlyOwner {
+        if (index_ >= _reservedNamesCount) revert IndexOutOfBounds();
+
         bytes32 labelHash_ = _reservedNamesList[index_];
         delete _reservedNames[labelHash_];
         _reservedNamesList[index_] = _reservedNamesList[_reservedNamesCount - 1];
