@@ -19,9 +19,7 @@ contract ReservedRegistry is Ownable, IReservedRegistry {
 
     /// Constructor ------------------------------------------------------
 
-    constructor(address owner_) Ownable(owner_) {
-        _transferOwnership(owner_);
-    }
+    constructor(address owner_) Ownable(owner_) {}
 
     /// Admin Functions  ---------------------------------------------------
 
