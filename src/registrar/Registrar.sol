@@ -5,6 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import {BaseRegistrar} from "src/registrar/types/BaseRegistrar.sol";
 import {BeraDefaultResolver} from "src/resolver/Resolver.sol";
@@ -18,7 +19,7 @@ import {BERA_NODE, GRACE_PERIOD} from "src/utils/Constants.sol";
 import {StringUtils} from "src/utils/StringUtils.sol";
 
 /// @title Registrar Controller
-contract RegistrarController is Ownable {
+contract RegistrarController is Ownable, ReentrancyGuard {
     using StringUtils for string;
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -576,7 +577,7 @@ contract RegistrarController is Ownable {
 
     /// @notice Refunds any remaining `msg.value` after processing a registration or renewal given`price`.
     /// @param price The total value to be retained, denominated in wei.
-    function _refundExcessEth(uint256 price) internal {
+    function _refundExcessEth(uint256 price) internal nonReentrant {
         if (msg.value > price) {
             (bool sent,) = payable(msg.sender).call{value: (msg.value - price)}("");
             if (!sent) revert TransferFailed();
