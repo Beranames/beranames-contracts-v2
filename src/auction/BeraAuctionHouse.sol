@@ -88,6 +88,12 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
 
         _pause();
 
+        if (reservePrice_ == 0) revert InvalidReservePrice();
+        if (minBidIncrementPercentage_ == 0) revert MinBidIncrementPercentageIsZero();
+        if (timeBuffer_ > MAX_TIME_BUFFER) {
+            revert TimeBufferTooLarge(timeBuffer_);
+        }
+
         reservePrice = reservePrice_;
         timeBuffer = timeBuffer_;
         minBidIncrementPercentage = minBidIncrementPercentage_;
@@ -113,7 +119,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * @notice Create a bid for a token, with a given amount.
      * @dev This contract only accepts payment in ETH.
      */
-    function createBid(uint256 tokenId) external payable override {
+    function createBid(uint256 tokenId) external payable override whenNotPaused {
         IBeraAuctionHouse.Auction memory _auction = auctionStorage;
 
         (uint192 _reservePrice, uint56 _timeBuffer, uint8 _minBidIncrementPercentage) =
@@ -211,6 +217,9 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * @dev Only callable by the owner.
      */
     function setReservePrice(uint192 _reservePrice) external override onlyOwner {
+        if (_reservePrice == 0) {
+            revert InvalidReservePrice();
+        }
         reservePrice = _reservePrice;
 
         emit AuctionReservePriceUpdated(_reservePrice);

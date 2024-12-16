@@ -395,7 +395,7 @@ contract SystemTest is BaseTest {
     }
 
     function test_registrationWithZeroLengthNameFails() public {
-        setLaunchTimeInPast();
+        setLaunchTimeNow();
 
         vm.startPrank(alice);
         vm.deal(alice, 1 ether);
@@ -409,7 +409,7 @@ contract SystemTest is BaseTest {
     }
 
     // function test_registrarRefundsExcessPayment() public {
-    //     setLaunchTimeInPast();
+    //     setLaunchTimeNow();
 
     //     vm.startPrank(alice);
     //     uint256 initialBalance = alice.balance;
@@ -553,9 +553,9 @@ contract SystemTest is BaseTest {
         vm.stopPrank();
     }
 
-    function setLaunchTimeInPast() internal {
+    function setLaunchTimeNow() internal {
         vm.startPrank(registrarAdmin);
-        registrar.setLaunchTime(block.timestamp - 10 days);
+        registrar.setLaunchTime(block.timestamp);
         vm.stopPrank();
     }
 

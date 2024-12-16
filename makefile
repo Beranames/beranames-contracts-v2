@@ -8,7 +8,7 @@ testnet--deploy-system:
 testnet--deploy-and-verify-system:
 	forge script script/System.s.sol:ContractScript \
 	--private-key ${WALLET_DEV_PRIVATE_KEY} \
-	--broadcast --verify \
+	--broadcast -vvvvv \
 	--rpc-url "https://bartio.rpc.berachain.com" \
 	--verifier-url "https://api.routescan.io/v2/network/testnet/evm/80084/etherscan" \
 	--etherscan-api-key "verifyContract" \

@@ -44,6 +44,9 @@ interface IBeraAuctionHouse {
     /// @notice Thrown when the payment receiver is being set to address(0).
     error InvalidPaymentReceiver();
 
+    /// @notice Thrown when the reserve price is being set to 0.
+    error InvalidReservePrice();
+
     struct Auction {
         uint256 tokenId;
         uint128 amount;

@@ -68,8 +68,7 @@ contract bArtioPriceOracle is IPriceOracle {
             discount_ = 40;
         }
 
-        uint256 durationInYears = duration / 365 days;
-        uint256 totalPrice = pricePerYear * durationInYears;
+        uint256 totalPrice = (pricePerYear * duration) / 365 days;
         uint256 discountAmount = (totalPrice * discount_) / 100;
         return (totalPrice, discountAmount);
     }
