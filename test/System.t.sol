@@ -10,7 +10,6 @@ import {ReverseRegistrar} from "src/registrar/ReverseRegistrar.sol";
 import {BeraDefaultResolver} from "src/resolver/Resolver.sol";
 import {RegistrarController} from "src/registrar/Registrar.sol";
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
-import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
 import {BeraAuctionHouse} from "src/auction/BeraAuctionHouse.sol";
@@ -41,7 +40,6 @@ contract SystemTest is BaseTest {
     RegistrarController public registrar;
 
     ReservedRegistry public reservedRegistry;
-    WhitelistValidator public whitelistValidator;
     PriceOracle public priceOracle;
 
     UniversalResolver public universalResolver;
@@ -105,9 +103,6 @@ contract SystemTest is BaseTest {
         pyth = new MockPyth(60, 1);
         priceOracle = new PriceOracle(address(pyth), BERA_USD_PYTH_PRICE_FEED_ID);
 
-        // Create the WhitelistValidator
-        whitelistValidator = new WhitelistValidator(address(registrarAdmin), address(signer));
-
         // Create the reserved registry
         reservedRegistry = new ReservedRegistry(address(deployer));
 
@@ -116,7 +111,8 @@ contract SystemTest is BaseTest {
             baseRegistrar,
             priceOracle,
             reverseRegistrar,
-            whitelistValidator,
+            whitelistSigner,
+            freeWhitelistSigner,
             reservedRegistry,
             address(registrarAdmin),
             BERA_NODE,
@@ -560,12 +556,20 @@ contract SystemTest is BaseTest {
     }
 
     function sign() internal view returns (bytes memory) {
-        bytes memory payload =
-            abi.encode(alice, address(0), 365 days, DEFAULT_NAME, DEFAULT_ROUND_ID, DEFAULT_ROUND_TOTAL_MINT);
-        bytes32 hash =
-            keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", abi.encodePacked(keccak256(payload))));
+        bytes memory payload = abi.encode(
+            DEFAULT_NAME,
+            alice,
+            365 days,
+            address(resolver),
+            new bytes[](0),
+            true,
+            address(0),
+            DEFAULT_ROUND_ID,
+            DEFAULT_ROUND_TOTAL_MINT
+        );
+        bytes32 hash = keccak256(payload);
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, hash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(whitelistSignerPk, hash);
 
         return abi.encodePacked(r, s, v);
     }

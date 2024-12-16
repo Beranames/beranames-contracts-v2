@@ -7,10 +7,10 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {BaseRegistrar} from "src/registrar/types/BaseRegistrar.sol";
 import {BeraDefaultResolver} from "src/resolver/Resolver.sol";
 
-import {IWhitelistValidator} from "src/registrar/interfaces/IWhitelistValidator.sol";
 import {IPriceOracle} from "src/registrar/interfaces/IPriceOracle.sol";
 import {IReverseRegistrar} from "src/registrar/interfaces/IReverseRegistrar.sol";
 import {IReservedRegistry} from "src/registrar/interfaces/IReservedRegistry.sol";
@@ -76,6 +76,18 @@ contract RegistrarController is Ownable, ReentrancyGuard {
     /// @notice Thrown when a reverse record is not allowed for reserved names.
     error ReverseRecordNotAllowedForReservedNames();
 
+    /// @notice Thrown when the signature is invalid.
+    error InvalidSignature();
+
+    /// @notice Thrown when the free mint limit is reached.
+    error FreeMintLimitReached();
+
+    /// @notice Thrown when the whitelist signer is invalid.
+    error InvalidWhitelistSigner();
+
+    /// @notice Thrown when the free whitelist signer is invalid.
+    error InvalidFreeWhitelistSigner();
+
     /// Events -----------------------------------------------------------
 
     /// @notice Emitted when an ETH payment was processed successfully.
@@ -136,6 +148,16 @@ contract RegistrarController is Ownable, ReentrancyGuard {
     /// @param newReservedNameMinterAddress the new address;
     event ReservedNamesMinterChanged(address newReservedNameMinterAddress);
 
+    /// @notice Emitted when whitelist authorizer is changed
+    ///
+    /// @param newWhitelistAuthorizerAddress the new address;
+    event WhitelistAuthorizerChanged(address newWhitelistAuthorizerAddress);
+
+    /// @notice Emitted when free whitelist authorizer is changed
+    ///
+    /// @param newFreeWhitelistAuthorizerAddress the new address;
+    event FreeWhitelistAuthorizerChanged(address newFreeWhitelistAuthorizerAddress);
+
     /// Datastructures ---------------------------------------------------
 
     /// @notice The details of a registration request.
@@ -177,9 +199,6 @@ contract RegistrarController is Ownable, ReentrancyGuard {
     /// @notice The implementation of the Reverse Registrar contract.
     IReverseRegistrar public reverseRegistrar;
 
-    /// @notice The address of the whitelist validator contract.
-    IWhitelistValidator public whitelistValidator;
-
     /// @notice The implementation of the Reserved Registry contract.
     IReservedRegistry public reservedRegistry;
 
@@ -215,6 +234,15 @@ contract RegistrarController is Ownable, ReentrancyGuard {
 
     /// @notice The address of the reserved names minter.
     address private reservedNamesMinter;
+
+    /// @notice The address of the whitelist authorizer.
+    address private whitelistAuthorizer;
+
+    /// @notice The address of the free whitelist authorizer.
+    address private freeWhitelistAuthorizer;
+
+    /// @notice The mapping of free mints count by address.
+    mapping(address => uint8) public freeMintsByAddress;
 
     /// Modifiers --------------------------------------------------------
 
@@ -254,7 +282,8 @@ contract RegistrarController is Ownable, ReentrancyGuard {
     /// @param base_ The base registrar contract.
     /// @param prices_ The pricing oracle contract.
     /// @param reverseRegistrar_ The reverse registrar contract.
-    /// @param whitelistValidator_ The whitelist validator contract.
+    /// @param whitelistSigner_ The whitelist signer contract.
+    /// @param freeWhitelistSigner_ The free whitelist signer contract.
     /// @param reservedRegistry_ The reserved registry contract.
     /// @param owner_ The permissioned address initialized as the `owner` in the `Ownable` context.
     /// @param rootNode_ The node for which this registrar manages registrations.
@@ -264,7 +293,8 @@ contract RegistrarController is Ownable, ReentrancyGuard {
         BaseRegistrar base_,
         IPriceOracle prices_,
         IReverseRegistrar reverseRegistrar_,
-        IWhitelistValidator whitelistValidator_,
+        address whitelistSigner_,
+        address freeWhitelistSigner_,
         IReservedRegistry reservedRegistry_,
         address owner_,
         bytes32 rootNode_,
@@ -274,10 +304,13 @@ contract RegistrarController is Ownable, ReentrancyGuard {
         base = base_;
         prices = prices_;
         reverseRegistrar = reverseRegistrar_;
+        if (whitelistSigner_ == address(0)) revert InvalidWhitelistSigner();
+        whitelistAuthorizer = whitelistSigner_;
+        if (freeWhitelistSigner_ == address(0)) revert InvalidFreeWhitelistSigner();
+        freeWhitelistAuthorizer = freeWhitelistSigner_;
         rootNode = rootNode_;
         rootName = rootName_;
         paymentReceiver = paymentReceiver_;
-        whitelistValidator = whitelistValidator_;
         reservedRegistry = reservedRegistry_;
         reverseRegistrar.claim(owner_);
     }
@@ -407,7 +440,7 @@ contract RegistrarController is Ownable, ReentrancyGuard {
         public
         validRegistration(request)
     {
-        _validateFreeWhitelist(request.owner, signature);
+        _validateFreeWhitelist(request, signature);
 
         uint256 strlen = request.name.strlen();
         if (strlen < 3) revert NameNotAvailable(request.name);
@@ -486,52 +519,71 @@ contract RegistrarController is Ownable, ReentrancyGuard {
         if (request.owner != msg.sender && request.reverseRecord) revert CantSetReverseRecordForOthers();
     }
 
+    /// @notice Validates the whitelist registration request and signature.
+    /// @param request The `WhitelistRegisterRequest` struct containing the details for the registration.
+    /// @param signature The signature of the whitelisted address.
+    /// @dev Encodes the payload following the WhitelistRegisterRequest struct order. Writes the payload hash to the `usedSignatures` mapping.
+    /// @dev Checks if the payload hash has already been used.
+    /// @dev Checks if the mint count for the round has not exceeded the total mint limit.
+    /// @dev Checks if the signer is the whitelist authorizer.
     function _validateWhitelist(WhitelistRegisterRequest calldata request, bytes calldata signature) internal {
-        (bytes32 r, bytes32 s, uint8 v) = unpackSignature(signature);
-
-        // Encode payload - signature format: (address owner, address referrer, uint256 duration, string name)
         bytes memory payload = abi.encode(
-            request.registerRequest.owner,
-            request.registerRequest.referrer,
-            request.registerRequest.duration,
             request.registerRequest.name,
+            request.registerRequest.owner,
+            request.registerRequest.duration,
+            request.registerRequest.resolver,
+            request.registerRequest.data,
+            request.registerRequest.reverseRecord,
+            request.registerRequest.referrer,
             request.round_id,
             request.round_total_mint
         );
+        bytes32 payloadHash = keccak256(payload);
 
-        if (usedSignatures[keccak256(payload)]) revert SignatureAlreadyUsed();
+        if (usedSignatures[payloadHash]) revert SignatureAlreadyUsed();
         if (mintsCountByRoundByAddress[msg.sender][request.round_id] >= request.round_total_mint) {
             revert MintLimitForRoundReached();
         }
 
-        // Validate signature
-        whitelistValidator.validateSignature(payload, v, r, s);
+        address signer = getSignerFromSignature(payloadHash, signature);
 
-        // Store the message hash in used signatures and increment the mint count for the round
-        usedSignatures[keccak256(payload)] = true;
+        if (signer == address(0) || signer != whitelistAuthorizer) revert InvalidSignature();
+
+        usedSignatures[payloadHash] = true;
         mintsCountByRoundByAddress[msg.sender][request.round_id]++;
     }
 
-    function _validateFreeWhitelist(address owner, bytes calldata signature) internal {
-        (bytes32 r, bytes32 s, uint8 v) = unpackSignature(signature);
+    /// @notice Validates the free whitelist registration request and signature.
+    /// @param request The `RegisterRequest` struct containing the details for the registration.
+    /// @param signature The signature of the whitelisted address.
+    /// @dev Encodes the payload following the RegisterRequest struct order. Writes the payload hash to the `usedFreeMintsSignatures` mapping.
+    /// @dev Checks if the payload hash has already been used.
+    /// @dev Checks if the owner has just one free mint.
+    function _validateFreeWhitelist(RegisterRequest calldata request, bytes calldata signature) internal {
+        bytes memory payload = abi.encode(
+            request.name,
+            request.owner,
+            request.duration,
+            request.resolver,
+            request.data,
+            request.reverseRecord,
+            request.referrer
+        );
+        bytes32 payloadHash = keccak256(payload);
 
-        bytes memory payload = abi.encode(owner);
-        if (usedFreeMintsSignatures[keccak256(payload)]) revert FreeMintSignatureAlreadyUsed();
+        if (usedFreeMintsSignatures[payloadHash]) revert FreeMintSignatureAlreadyUsed();
+        if (freeMintsByAddress[msg.sender] != 0) revert FreeMintLimitReached();
 
-        whitelistValidator.validateSignature(payload, v, r, s);
+        address signer = getSignerFromSignature(payloadHash, signature);
 
-        usedFreeMintsSignatures[keccak256(payload)] = true;
+        if (signer == address(0) || signer != freeWhitelistAuthorizer) revert InvalidSignature();
+
+        usedFreeMintsSignatures[payloadHash] = true;
+        freeMintsByAddress[msg.sender]++;
     }
 
-    function unpackSignature(bytes calldata signature) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
-        // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/ECDSA.sol#L66-L70
-        assembly {
-            r := calldataload(signature.offset)
-            s := calldataload(add(signature.offset, 32))
-            v := byte(0, calldataload(add(signature.offset, 64)))
-        }
-
-        return (r, s, v);
+    function getSignerFromSignature(bytes32 payloadHash, bytes calldata signature) internal pure returns (address) {
+        return ECDSA.recover(payloadHash, signature);
     }
 
     /// @notice Helper for deciding whether to include a launch-premium.
@@ -618,8 +670,20 @@ contract RegistrarController is Ownable, ReentrancyGuard {
         IERC20(_token).safeTransfer(_to, _amount);
     }
 
+    /// @notice Allows the owner to set the reserved names minter.
+    /// @param reservedNamesMinter_ The address of the reserved names minter.
     function setReservedNamesMinter(address reservedNamesMinter_) external onlyOwner {
         reservedNamesMinter = reservedNamesMinter_;
         emit ReservedNamesMinterChanged(reservedNamesMinter);
+    }
+
+    function setWhitelistAuthorizer(address _whitelistAuthorizer) external onlyOwner {
+        whitelistAuthorizer = _whitelistAuthorizer;
+        emit WhitelistAuthorizerChanged(_whitelistAuthorizer);
+    }
+
+    function setFreeWhitelistAuthorizer(address _freeWhitelistAuthorizer) external onlyOwner {
+        freeWhitelistAuthorizer = _freeWhitelistAuthorizer;
+        emit FreeWhitelistAuthorizerChanged(_freeWhitelistAuthorizer);
     }
 }
