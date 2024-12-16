@@ -79,12 +79,17 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         uint8 minBidIncrementPercentage_,
         address paymentReceiver_
     ) Ownable(msg.sender) {
+        if (address(base_) == address(0)) revert InvalidBaseRegistrar();
         base = base_;
+        if (address(resolver_) == address(0)) revert InvalidResolver();
         resolver = resolver_;
+        if (address(weth_) == address(0)) revert InvalidWETH();
         weth = weth_;
+        if (paymentReceiver_ == address(0)) revert InvalidPaymentReceiver();
+        paymentReceiver = paymentReceiver_;
+
         auctionDuration = auctionDuration_;
         registrationDuration = registrationDuration_;
-        paymentReceiver = paymentReceiver_;
 
         _pause();
 
@@ -246,6 +251,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
     /// @param paymentReceiver_ The new payment receiver address.
     function setPaymentReceiver(address paymentReceiver_) external onlyOwner {
         if (paymentReceiver_ == address(0)) revert InvalidPaymentReceiver();
+
         paymentReceiver = paymentReceiver_;
         emit PaymentReceiverUpdated(paymentReceiver_);
     }
@@ -325,6 +331,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
             weth.deposit{value: amount}();
             weth.transfer(to, amount);
         }
+        emit ETHPaymentProcessed(msg.sender, to, amount);
     }
 
     /**

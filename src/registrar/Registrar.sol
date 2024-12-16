@@ -72,6 +72,24 @@ contract RegistrarController is Ownable {
     /// @notice Thrown when the launch time is in the past.
     error LaunchTimeInPast();
 
+    /// @notice Thrown when the price oracle is being set to address(0).
+    error InvalidPriceOracle();
+
+    /// @notice Thrown when the reverse registrar is being set to address(0).
+    error InvalidReverseRegistrar();
+
+    /// @notice Thrown when the whitelist validator is being set to address(0).
+    error InvalidWhitelistValidator();
+
+    /// @notice Thrown when the reserved registry is being set to address(0).
+    error InvalidReservedRegistry();
+
+    /// @notice Thrown when the base registrar is being set to address(0).
+    error InvalidBaseRegistrar();
+
+    /// @notice Thrown when the reserved names minter is being set to address(0).
+    error InvalidReservedNamesMinter();
+
     /// Events -----------------------------------------------------------
 
     /// @notice Emitted when an ETH payment was processed successfully.
@@ -267,14 +285,22 @@ contract RegistrarController is Ownable {
         string memory rootName_,
         address paymentReceiver_
     ) Ownable(owner_) {
+        if (address(base_) == address(0)) revert InvalidBaseRegistrar();
         base = base_;
+        if (address(prices_) == address(0)) revert InvalidPriceOracle();
         prices = prices_;
+        if (address(reverseRegistrar_) == address(0)) revert InvalidReverseRegistrar();
         reverseRegistrar = reverseRegistrar_;
+        if (paymentReceiver_ == address(0)) revert InvalidPaymentReceiver();
+        paymentReceiver = paymentReceiver_;
+        if (address(whitelistValidator_) == address(0)) revert InvalidWhitelistValidator();
+        whitelistValidator = whitelistValidator_;
+        if (address(reservedRegistry_) == address(0)) revert InvalidReservedRegistry();
+        reservedRegistry = reservedRegistry_;
+
         rootNode = rootNode_;
         rootName = rootName_;
-        paymentReceiver = paymentReceiver_;
-        whitelistValidator = whitelistValidator_;
-        reservedRegistry = reservedRegistry_;
+
         reverseRegistrar.claim(owner_);
     }
 
@@ -286,6 +312,8 @@ contract RegistrarController is Ownable {
     ///
     /// @param prices_ The new pricing oracle.
     function setPriceOracle(IPriceOracle prices_) external onlyOwner {
+        if (address(prices_) == address(0)) revert InvalidPriceOracle();
+
         prices = prices_;
         emit PriceOracleUpdated(address(prices_));
     }
@@ -296,6 +324,8 @@ contract RegistrarController is Ownable {
     ///
     /// @param reverse_ The new reverse registrar contract.
     function setReverseRegistrar(IReverseRegistrar reverse_) external onlyOwner {
+        if (address(reverse_) == address(0)) revert InvalidReverseRegistrar();
+
         reverseRegistrar = reverse_;
         emit ReverseRegistrarUpdated(address(reverse_));
     }
@@ -319,6 +349,7 @@ contract RegistrarController is Ownable {
     /// @param paymentReceiver_ The new payment receiver address.
     function setPaymentReceiver(address paymentReceiver_) external onlyOwner {
         if (paymentReceiver_ == address(0)) revert InvalidPaymentReceiver();
+
         paymentReceiver = paymentReceiver_;
         emit PaymentReceiverUpdated(paymentReceiver_);
     }
@@ -345,7 +376,7 @@ contract RegistrarController is Ownable {
     ///
     /// @return `true` if the name is `valid` and available on the `base` registrar, else `false`.
     function available(string memory name) public view returns (bool) {
-        bytes32 label = keccak256(bytes(name));
+        bytes32 label = keccak256(abi.encodePacked(name));
         return valid(name) && base.isAvailable(uint256(label));
     }
 
@@ -356,7 +387,7 @@ contract RegistrarController is Ownable {
     ///
     /// @return price The `Price` tuple containing the base and premium prices respectively, denominated in wei.
     function rentPrice(string memory name, uint256 duration) public view returns (IPriceOracle.Price memory price) {
-        bytes32 label = keccak256(bytes(name));
+        bytes32 label = keccak256(abi.encodePacked(name));
         price = prices.price(name, _getExpiry(uint256(label)), duration);
     }
 
@@ -451,7 +482,7 @@ contract RegistrarController is Ownable {
     /// @param name The name that is being renewed.
     /// @param duration The duration to extend the expiry, in seconds.
     function renew(string calldata name, uint256 duration) external payable {
-        bytes32 labelhash = keccak256(bytes(name));
+        bytes32 labelhash = keccak256(abi.encodePacked(name));
         uint256 tokenId = uint256(labelhash);
         IPriceOracle.Price memory price = rentPrice(name, duration);
 
@@ -554,11 +585,11 @@ contract RegistrarController is Ownable {
     /// @param request The `RegisterRequest` struct containing the details for the registration.
     function _registerRequest(RegisterRequest calldata request) internal {
         uint256 expires = base.registerWithRecord(
-            uint256(keccak256(bytes(request.name))), request.owner, request.duration, request.resolver, 0
+            uint256(keccak256(abi.encodePacked(request.name))), request.owner, request.duration, request.resolver, 0
         );
 
         if (request.data.length > 0) {
-            _setRecords(request.resolver, keccak256(bytes(request.name)), request.data);
+            _setRecords(request.resolver, keccak256(abi.encodePacked(request.name)), request.data);
         }
 
         if (request.reverseRecord) {
@@ -566,10 +597,10 @@ contract RegistrarController is Ownable {
         }
 
         // two different events for ENS compatibility
-        emit NameRegistered(request.name, keccak256(bytes(request.name)), request.owner, expires);
+        emit NameRegistered(request.name, keccak256(abi.encodePacked(request.name)), request.owner, expires);
         if (request.referrer != address(0)) {
             emit NameRegisteredWithReferral(
-                request.name, keccak256(bytes(request.name)), request.owner, request.referrer, expires
+                request.name, keccak256(abi.encodePacked(request.name)), request.owner, request.referrer, expires
             );
         }
     }
@@ -614,6 +645,8 @@ contract RegistrarController is Ownable {
     }
 
     function setReservedNamesMinter(address reservedNamesMinter_) external onlyOwner {
+        if (reservedNamesMinter_ == address(0)) revert InvalidReservedNamesMinter();
+
         reservedNamesMinter = reservedNamesMinter_;
         emit ReservedNamesMinterChanged(reservedNamesMinter);
     }

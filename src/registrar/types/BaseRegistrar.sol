@@ -49,6 +49,9 @@ contract BaseRegistrar is ERC721, Ownable {
     /// @notice Thrown when this contract does not own the `baseNode`.
     error RegistrarNotLive();
 
+    /// @notice Thrown when the registry is being set to address(0).
+    error InvalidRegistry();
+
     /// Events -----------------------------------------------------------
 
     /// @notice Emitted when a Controller is added to the approved `controllers` mapping.
@@ -166,7 +169,7 @@ contract BaseRegistrar is ERC721, Ownable {
         ERC721("Beranames", unicode"🐻🪪")
         Ownable(owner_)
     {
-        _transferOwnership(owner_);
+        if (address(registry_) == address(0)) revert InvalidRegistry();
         registry = registry_;
         baseNode = baseNode_;
         _tokenURI = tokenURI_;
@@ -322,7 +325,7 @@ contract BaseRegistrar is ERC721, Ownable {
     }
 
     /// @notice transferFrom is overridden to handle the registry update.
-    function transferFrom(address from, address to, uint256 tokenId) public override {
+    function transferFrom(address from, address to, uint256 tokenId) public override live {
         super.transferFrom(from, to, tokenId);
         registry.setSubnodeOwner(baseNode, bytes32(tokenId), to);
     }
@@ -380,6 +383,6 @@ contract BaseRegistrar is ERC721, Ownable {
         returns (bool)
     {
         address owner_ = _ownerOf(tokenId);
-        return owner_ == spender || _isAuthorized(owner_, spender, tokenId);
+        return _isAuthorized(owner_, spender, tokenId);
     }
 }

@@ -9,7 +9,7 @@ import "src/resolver/interfaces/IMulticallable.sol";
 abstract contract Multicallable is IMulticallable, ERC165 {
     function _multicall(bytes32 nodehash, bytes[] calldata data) internal returns (bytes[] memory results) {
         results = new bytes[](data.length);
-        for (uint256 i = 0; i < data.length; i++) {
+        for (uint256 i = 0; i < data.length; ++i) {
             if (nodehash != bytes32(0)) {
                 bytes32 txNamehash = bytes32(data[i][4:36]);
                 require(txNamehash == nodehash, "multicall: All records must have a matching namehash");

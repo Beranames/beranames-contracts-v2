@@ -157,7 +157,7 @@ contract FlowTest is BaseTest {
         vm.startPrank(alice);
         vm.deal(alice, 1000 ether);
         registrarController.register{value: 500 ether}(registerRequestWithNoReverseRecord(alice));
-        uint256 tokenId = uint256(keccak256(bytes("cien")));
+        uint256 tokenId = uint256(keccak256(abi.encodePacked("cien")));
         assertEq(baseRegistrar.ownerOf(tokenId), alice);
         vm.stopPrank();
     }
@@ -167,7 +167,7 @@ contract FlowTest is BaseTest {
         vm.deal(alice, 1000 ether);
         // register and set addr
         registrarController.register{value: 500 ether}(registerRequestWithNoReverseRecord(alice));
-        bytes32 label = keccak256(bytes("cien"));
+        bytes32 label = keccak256(abi.encodePacked("cien"));
         bytes32 subnode = _calculateNode(label, BERA_NODE);
         resolver.setAddr(subnode, address(alice));
         // resolve
@@ -196,7 +196,7 @@ contract FlowTest is BaseTest {
         vm.deal(alice, 1000 ether);
         // register and set addr
         registrarController.register{value: 500 ether}(registerRequestWithNoReverseRecord(alice));
-        bytes32 node = _calculateNode(keccak256(bytes("cien")), BERA_NODE);
+        bytes32 node = _calculateNode(keccak256(abi.encodePacked("cien")), BERA_NODE);
         // dns encode name
         (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName("cien.bera");
         // resolve
@@ -240,10 +240,10 @@ contract FlowTest is BaseTest {
     function test_UR_forwardResolution_success_with_subdomain_using_parent_resolver() public prank(alice) {
         bytes32 nameNode = registerAndSetAddr(alice);
         // create subdomain
-        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(bob), address(0), DEFAULT_TTL);
+        registry.setSubnodeRecord(nameNode, keccak256(abi.encodePacked("sub")), address(bob), address(0), DEFAULT_TTL);
         // set addr for subdomain by bob
         vm.startPrank(bob);
-        bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(bytes("sub"))));
+        bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(abi.encodePacked("sub"))));
         resolver.setAddr(subnode, address(bob));
         vm.stopPrank();
         // dns encode name
@@ -259,7 +259,7 @@ contract FlowTest is BaseTest {
     function test_UR_reverseResolution_success_with_subdomain_using_parent_resolver() public prank(alice) {
         bytes32 nameNode = registerAndSetAddr(alice);
         // create subdomain
-        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(bob), address(0), DEFAULT_TTL);
+        registry.setSubnodeRecord(nameNode, keccak256(abi.encodePacked("sub")), address(bob), address(0), DEFAULT_TTL);
         // set name for subdomain by bob
         vm.startPrank(bob);
         reverseRegistrar.setName("sub.cien.bera");
@@ -282,8 +282,8 @@ contract FlowTest is BaseTest {
 
     function test_subdomain_is_not_erc721_compliant() public prank(alice) {
         bytes32 nameNode = registerAndSetAddr(alice);
-        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(bob), address(0), DEFAULT_TTL);
-        uint256 tokenId = uint256(keccak256(bytes("sub")));
+        registry.setSubnodeRecord(nameNode, keccak256(abi.encodePacked("sub")), address(bob), address(0), DEFAULT_TTL);
+        uint256 tokenId = uint256(keccak256(abi.encodePacked("sub")));
         // base registrar is the ERC721 contract that is the owner of the .bera node
         vm.expectRevert();
         baseRegistrar.ownerOf(tokenId);
@@ -292,29 +292,29 @@ contract FlowTest is BaseTest {
     function test_node_owner_can_delete_subnode_and_then_recreate_it() public prank(alice) {
         bytes32 nameNode = registerAndSetAddr(alice);
         // NOTE: setting the subnode owner to bob
-        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(bob), address(0), DEFAULT_TTL);
+        registry.setSubnodeRecord(nameNode, keccak256(abi.encodePacked("sub")), address(bob), address(0), DEFAULT_TTL);
         // NOTE: alice should be able to delete the subnode
-        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(0), address(0), 0);
-        bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(bytes("sub"))));
+        registry.setSubnodeRecord(nameNode, keccak256(abi.encodePacked("sub")), address(0), address(0), 0);
+        bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(abi.encodePacked("sub"))));
         // NOTE: setting the subnode owner to zero address acts as a "delete"
         assertEq(registry.owner(subnode), address(0), "subnode owner is zero address");
         // NOTE: alice should be able to recreate the subnode
-        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(chris), address(0), DEFAULT_TTL);
+        registry.setSubnodeRecord(nameNode, keccak256(abi.encodePacked("sub")), address(chris), address(0), DEFAULT_TTL);
         assertEq(registry.owner(subnode), address(chris), "subnode owner is now chris");
     }
 
     function test_node_owner_can_set_addr_for_subnode_if_node_owner_is_subnode_owner() public prank(alice) {
         bytes32 nameNode = registerAndSetAddr(alice);
-        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(alice), address(0), DEFAULT_TTL);
-        bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(bytes("sub"))));
+        registry.setSubnodeRecord(nameNode, keccak256(abi.encodePacked("sub")), address(alice), address(0), DEFAULT_TTL);
+        bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(abi.encodePacked("sub"))));
         resolver.setAddr(subnode, address(chris));
         assertEq(resolver.addr(subnode), address(chris), "addr is chris");
     }
 
     function test_node_owner_cannot_set_addr_for_subnode_if_node_owner_is_not_subnode_owner() public prank(alice) {
         bytes32 nameNode = registerAndSetAddr(alice);
-        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(bob), address(0), DEFAULT_TTL);
-        bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(bytes("sub"))));
+        registry.setSubnodeRecord(nameNode, keccak256(abi.encodePacked("sub")), address(bob), address(0), DEFAULT_TTL);
+        bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(abi.encodePacked("sub"))));
         vm.expectRevert("Unauthorized");
         resolver.setAddr(subnode, address(chris));
     }
@@ -401,15 +401,17 @@ contract FlowTest is BaseTest {
 
     function test_ERC721_transferFrom_updates_registry() public prank(alice) {
         bytes32 node = registerAndSetAddr(alice);
-        baseRegistrar.transferFrom(alice, bob, uint256(keccak256(bytes("cien"))));
-        assertEq(baseRegistrar.ownerOf(uint256(keccak256(bytes("cien")))), address(bob), "token owner is bob");
+        baseRegistrar.transferFrom(alice, bob, uint256(keccak256(abi.encodePacked("cien"))));
+        assertEq(
+            baseRegistrar.ownerOf(uint256(keccak256(abi.encodePacked("cien")))), address(bob), "token owner is bob"
+        );
         assertEq(registry.owner(node), address(bob), "registry owner is bob");
     }
 
     function test_ERC721_transferFrom_allows_new_owner_to_set_record_without_explicit_reclaim() public {
         vm.startPrank(alice);
         bytes32 node = registerAndSetAddr(alice);
-        baseRegistrar.transferFrom(alice, bob, uint256(keccak256(bytes("cien"))));
+        baseRegistrar.transferFrom(alice, bob, uint256(keccak256(abi.encodePacked("cien"))));
         vm.stopPrank();
         vm.startPrank(bob);
         resolver.setAddr(node, address(bob));
@@ -455,7 +457,7 @@ contract FlowTest is BaseTest {
     function registerAndSetAddr(address _owner) internal returns (bytes32) {
         vm.deal(_owner, 1000 ether);
         registrarController.register{value: 500 ether}(registerRequestWithNoReverseRecord(_owner));
-        bytes32 label = keccak256(bytes("cien"));
+        bytes32 label = keccak256(abi.encodePacked("cien"));
         bytes32 subnode = _calculateNode(label, BERA_NODE);
         resolver.setAddr(subnode, _owner);
         return subnode;

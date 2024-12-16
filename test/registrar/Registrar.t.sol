@@ -42,7 +42,7 @@ contract RegistrarTest is SystemTest {
         RegistrarController.RegisterRequest memory req = defaultRequest(name, alice);
         registrar.register{value: 500 ether}(req);
 
-        assertEq(baseRegistrar.ownerOf(uint256(keccak256(bytes(name)))), alice);
+        assertEq(baseRegistrar.ownerOf(uint256(keccak256(abi.encodePacked(name)))), alice);
     }
 
     function test_register_oneChar_success() public prankWithBalance(alice, 1000 ether) {
@@ -50,7 +50,7 @@ contract RegistrarTest is SystemTest {
         RegistrarController.RegisterRequest memory req = defaultRequest(name, alice);
         registrar.register{value: 500 ether}(req);
 
-        assertEq(baseRegistrar.ownerOf(uint256(keccak256(bytes(name)))), alice);
+        assertEq(baseRegistrar.ownerOf(uint256(keccak256(abi.encodePacked(name)))), alice);
     }
 
     function test_register_oneCharPlusEmoji_success() public prankWithBalance(alice, 1000 ether) {
@@ -58,7 +58,7 @@ contract RegistrarTest is SystemTest {
         RegistrarController.RegisterRequest memory req = defaultRequest(name, alice);
         registrar.register{value: 500 ether}(req);
 
-        assertEq(baseRegistrar.ownerOf(uint256(keccak256(bytes(name)))), alice);
+        assertEq(baseRegistrar.ownerOf(uint256(keccak256(abi.encodePacked(name)))), alice);
     }
 
     function test_register_oneEmoji_failure() public prankWithBalance(alice, 1000 ether) {
@@ -144,7 +144,7 @@ contract RegistrarTest is SystemTest {
 
     function test__valid__failure_all_emojis() public {
         EmojiList emojiList = new EmojiList();
-        for (uint256 i = 0; i < emojiList.emojisLength(); i++) {
+        for (uint256 i = 0; i < emojiList.emojisLength(); ++i) {
             string memory emoji = emojiList.emojis(i);
             bool isValid = registrar.valid(emoji);
             assertFalse(isValid, string(abi.encodePacked("Emoji: ", emoji, " should be invalid")));

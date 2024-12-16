@@ -65,7 +65,7 @@ contract MintScript is Script {
         registrar.register{value: 1 ether}(req);
         // at this point, name is minted but not resolvable by Viem
 
-        bytes32 node_ = _calculateNode(keccak256(bytes(NAME_TO_MINT)), BERA_NODE);
+        bytes32 node_ = _calculateNode(keccak256(abi.encodePacked(NAME_TO_MINT)), BERA_NODE);
         resolver.setAddr(node_, msg.sender);
         resolver.setText(node_, "avatar", AVATAR_URL);
         // at this point, name is resolvable by Viem
@@ -74,7 +74,7 @@ contract MintScript is Script {
     function mintWithData() public {
         RegistrarController.RegisterRequest memory req = defaultRegisterRequest();
 
-        bytes32 node_ = _calculateNode(keccak256(bytes(req.name)), BERA_NODE);
+        bytes32 node_ = _calculateNode(keccak256(abi.encodePacked(req.name)), BERA_NODE);
         bytes memory addrPayload = abi.encodeWithSignature("setAddr(bytes32,address)", node_, msg.sender);
         bytes memory avatarPayload =
             abi.encodeWithSignature("setText(bytes32,string,string)", node_, "avatar", AVATAR_URL);
@@ -90,7 +90,7 @@ contract MintScript is Script {
     }
 
     function verifyMint() public view {
-        bytes32 node_ = _calculateNode(keccak256(bytes(NAME_TO_MINT)), BERA_NODE);
+        bytes32 node_ = _calculateNode(keccak256(abi.encodePacked(NAME_TO_MINT)), BERA_NODE);
 
         // 1. checking address => name resolution via reverseRegistrar - not really used because it needs 2 rpc calls
         bytes32 reverseNode = reverseRegistrar.node(msg.sender);
@@ -147,7 +147,7 @@ contract MintScript is Script {
         bytes memory hexString = new bytes(40); // 20 bytes address * 2 characters per byte
         bytes memory hexSymbols = "0123456789abcdef"; // Hexadecimal symbols
 
-        for (uint256 i = 0; i < 20; i++) {
+        for (uint256 i = 0; i < 20; ++i) {
             hexString[i * 2] = hexSymbols[uint8(addressBytes[i] >> 4)]; // Higher nibble (first half) shift right
             hexString[i * 2 + 1] = hexSymbols[uint8(addressBytes[i] & 0x0f)]; // Lower nibble (second half) bitwise AND
         }

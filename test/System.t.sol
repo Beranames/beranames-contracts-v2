@@ -299,7 +299,7 @@ contract SystemTest is BaseTest {
         registrar.register{value: 500 ether}(req);
 
         // Calculate the node for the minted name
-        bytes32 node_ = _calculateNode(keccak256(bytes(label_)), BERA_NODE);
+        bytes32 node_ = _calculateNode(keccak256(abi.encodePacked(label_)), BERA_NODE);
 
         // Configure base resolver records for the new name
         resolver.setAddr(node_, alice);
@@ -322,7 +322,7 @@ contract SystemTest is BaseTest {
         registrar.register{value: 500 ether}(req);
 
         // Calculate the node for the minted name
-        bytes32 node_ = _calculateNode(keccak256(bytes(label_)), BERA_NODE);
+        bytes32 node_ = _calculateNode(keccak256(abi.encodePacked(label_)), BERA_NODE);
         assertEq(node_, 0x2462a02c69cc8f152ee2a38a1282ee7d0331f67fe8d218f63034af91a81af59a);
 
         // Hit the universal resolver to verify resolution of the records above
@@ -363,7 +363,7 @@ contract SystemTest is BaseTest {
         // Set up a basic request & register the name
         RegistrarController.RegisterRequest memory req = defaultRequest();
         req.name = label_;
-        bytes32 node_ = _calculateNode(keccak256(bytes(label_)), BERA_NODE);
+        bytes32 node_ = _calculateNode(keccak256(abi.encodePacked(label_)), BERA_NODE);
         bytes memory payload = abi.encodeWithSignature("setAddr(bytes32,address)", node_, alice);
         bytes[] memory data = new bytes[](1);
         data[0] = payload;
@@ -431,7 +431,7 @@ contract SystemTest is BaseTest {
         RegistrarController.RegisterRequest memory req = defaultRequest();
         registrar.register{value: 500 ether}(req);
 
-        bytes32 node_ = _calculateNode(keccak256(bytes(req.name)), BERA_NODE);
+        bytes32 node_ = _calculateNode(keccak256(abi.encodePacked(req.name)), BERA_NODE);
         resolver.setAddr(node_, alice);
 
         // \x03 because foo is 3 chars
@@ -451,7 +451,7 @@ contract SystemTest is BaseTest {
         vm.deal(alice, 1000 ether);
 
         RegistrarController.RegisterRequest memory req = defaultRequestWithData(alice);
-        bytes32 node_ = _calculateNode(keccak256(bytes(req.name)), BERA_NODE);
+        bytes32 node_ = _calculateNode(keccak256(abi.encodePacked(req.name)), BERA_NODE);
 
         registrar.register{value: 500 ether}(req);
 
@@ -521,7 +521,7 @@ contract SystemTest is BaseTest {
         returns (RegistrarController.RegisterRequest memory)
     {
         string memory name = "foo-bar";
-        bytes32 node_ = _calculateNode(keccak256(bytes(name)), BERA_NODE);
+        bytes32 node_ = _calculateNode(keccak256(abi.encodePacked(name)), BERA_NODE);
         bytes memory payload = abi.encodeWithSignature("setAddr(bytes32,address)", node_, owner_);
         bytes[] memory data = new bytes[](1);
         data[0] = payload;

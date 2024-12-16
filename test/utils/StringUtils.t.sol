@@ -163,7 +163,7 @@ contract StringUtilsTest is Test {
     function test_all_emojis() public {
         EmojiList emojiList = new EmojiList();
 
-        for (uint256 i = 0; i < emojiList.emojisLength(); i++) {
+        for (uint256 i = 0; i < emojiList.emojisLength(); ++i) {
             assertEq(
                 emojiList.emojis(i).strlen(),
                 1,
