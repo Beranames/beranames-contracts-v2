@@ -13,9 +13,13 @@ contract BaseTest is Test {
     // Registrar Admin
     address public registrarAdmin;
 
-    // Signer
-    address public signer;
-    uint256 public signerPk;
+    // Whitelist Signer
+    address public whitelistSigner;
+    uint256 public whitelistSignerPk;
+
+    // Free Whitelist Signer
+    address public freeWhitelistSigner;
+    uint256 public freeWhitelistSignerPk;
 
     // Users & non permissioned addresses
     address public alice;
@@ -37,7 +41,8 @@ contract BaseTest is Test {
         registrarAdmin = utils.initializeAccount("Registrar Admin");
 
         // Signer
-        (signer, signerPk) = makeAddrAndKey("signer");
+        (whitelistSigner, whitelistSignerPk) = makeAddrAndKey("whitelistSigner");
+        (freeWhitelistSigner, freeWhitelistSignerPk) = makeAddrAndKey("freeWhitelistSigner");
 
         // Users & non permissioned addresses
         alice = utils.initializeAccount("Alice");
