@@ -49,7 +49,7 @@ interface IBeraAuctionHouse {
 
     struct Auction {
         uint256 tokenId;
-        uint128 amount;
+        uint256 amount;
         uint64 startTime;
         uint64 endTime;
         // The address of the current highest bid
@@ -69,7 +69,7 @@ interface IBeraAuctionHouse {
         // Slug 1
         uint256 tokenId;
         // Slug 2
-        uint128 amount;
+        uint256 amount;
         uint64 startTime;
         uint64 endTime;
         // Slug 3
