@@ -453,13 +453,13 @@ contract RegistrarController is Ownable {
     function renew(string calldata name, uint256 duration) external payable {
         bytes32 labelhash = keccak256(bytes(name));
         uint256 tokenId = uint256(labelhash);
-        IPriceOracle.Price memory price = rentPrice(name, duration);
+        uint256 price = registerPrice(name, duration);
 
-        _validatePayment(price.base);
+        _validatePayment(price);
 
         uint256 expires = base.renew(tokenId, duration);
 
-        _refundExcessEth(price.base);
+        _refundExcessEth(price);
 
         emit NameRenewed(name, labelhash, expires);
     }
