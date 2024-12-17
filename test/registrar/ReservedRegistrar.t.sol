@@ -10,6 +10,7 @@ contract ReservedRegistrarTest is SystemTest {
     function test_name_reserved_mint__success() public {
         address minter = makeAddr("minter");
         RegistrarController.RegisterRequest memory req = defaultRequest();
+        req.reverseRecord = false;
 
         // add to reserved names
         vm.prank(deployer);

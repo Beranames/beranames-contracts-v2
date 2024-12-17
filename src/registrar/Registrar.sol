@@ -73,6 +73,9 @@ contract RegistrarController is Ownable, ReentrancyGuard {
     /// @notice Thrown when the launch time is in the past.
     error LaunchTimeInPast();
 
+    /// @notice Thrown when a reverse record is not allowed for reserved names.
+    error ReverseRecordNotAllowedForReservedNames();
+
     /// Events -----------------------------------------------------------
 
     /// @notice Emitted when an ETH payment was processed successfully.
@@ -424,6 +427,7 @@ contract RegistrarController is Ownable, ReentrancyGuard {
             revert NotAuthorisedToMintReservedNames();
         }
         if (!reservedRegistry.isReservedName(request.name)) revert NameNotReserved();
+        if (request.reverseRecord) revert ReverseRecordNotAllowedForReservedNames();
 
         _registerRequest(request);
     }
