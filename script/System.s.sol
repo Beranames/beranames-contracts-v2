@@ -9,7 +9,6 @@ import {BaseRegistrar} from "src/registrar/types/BaseRegistrar.sol";
 import {ReverseRegistrar} from "src/registrar/ReverseRegistrar.sol";
 import {BeraDefaultResolver} from "src/resolver/Resolver.sol";
 import {RegistrarController} from "src/registrar/Registrar.sol";
-import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
@@ -34,7 +33,6 @@ contract ContractScript is Script {
     RegistrarController public registrar;
 
     ReservedRegistry public reservedRegistry;
-    WhitelistValidator public whitelistValidator;
     IPriceOracle public priceOracle;
 
     UniversalResolver public universalResolver;
@@ -45,7 +43,8 @@ contract ContractScript is Script {
     // TODO: Update these with the correct addresses
     address public deployer = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
     address public registrarAdmin = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
-    address public signer = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+    address public whitelistSigner = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+    address public freeWhitelistSigner = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
 
     function setUp() public {}
 
@@ -99,9 +98,6 @@ contract ContractScript is Script {
 
         priceOracle = new bArtioPriceOracle();
 
-        // Create the WhitelistValidator
-        whitelistValidator = new WhitelistValidator(address(registrarAdmin), address(signer));
-
         // Create the reserved registry
         reservedRegistry = new ReservedRegistry(address(registrarAdmin));
 
@@ -110,7 +106,8 @@ contract ContractScript is Script {
             baseRegistrar,
             priceOracle,
             reverseRegistrar,
-            whitelistValidator,
+            whitelistSigner,
+            freeWhitelistSigner,
             reservedRegistry,
             address(registrarAdmin),
             BERA_NODE,

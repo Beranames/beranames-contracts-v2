@@ -28,30 +28,34 @@ contract FreeWhitelistRegistrarTest is SystemTest {
             referrer: address(0)
         });
 
-        bytes memory payload = abi.encode(request.owner);
-        bytes32 payloadHash = keccak256(payload);
-        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
-        bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, payloadHash));
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, prefixedHash);
-
-        bytes memory signature = abi.encodePacked(r, s, v);
-
         vm.expectRevert(abi.encodeWithSelector(RegistrarController.NameNotAvailable.selector, nameToMint));
-        registrar.whitelistFreeRegister(request, signature);
+        registrar.whitelistFreeRegister(request, sign(request));
 
         request.name = unicode"alice🐻‍❄️-free-whitelisted";
-        registrar.whitelistFreeRegister(request, signature);
+        registrar.whitelistFreeRegister(request, sign(request));
         assertEq(baseRegistrar.ownerOf(uint256(keccak256(bytes(request.name)))), alice);
 
-        // second time fails because the signature has already been used
-        request.name = unicode"alice🐻‍❄️-free-whitelisted2";
-        vm.expectRevert(abi.encodeWithSelector(RegistrarController.FreeMintSignatureAlreadyUsed.selector));
-        registrar.whitelistFreeRegister(request, signature);
-
-        // also if you change the name, it fails, because signature is used
+        // if you change the name, it fails, because you have already minted a name
         request.name = "foooooobar";
-        vm.expectRevert(abi.encodeWithSelector(RegistrarController.FreeMintSignatureAlreadyUsed.selector));
-        registrar.whitelistFreeRegister(request, signature);
+        vm.expectRevert(abi.encodeWithSelector(RegistrarController.FreeMintLimitReached.selector));
+        registrar.whitelistFreeRegister(request, sign(request));
+    }
+
+    function sign(RegistrarController.RegisterRequest memory request) public view returns (bytes memory) {
+        bytes memory payload = abi.encode(
+            request.name,
+            request.owner,
+            request.duration,
+            request.resolver,
+            request.data,
+            request.reverseRecord,
+            request.referrer
+        );
+        bytes32 payloadHash = keccak256(payload);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(freeWhitelistSignerPk, payloadHash);
+
+        bytes memory signature = abi.encodePacked(r, s, v);
+        return signature;
     }
 }
