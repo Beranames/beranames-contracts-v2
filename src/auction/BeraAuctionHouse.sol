@@ -119,7 +119,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * @notice Create a bid for a token, with a given amount.
      * @dev This contract only accepts payment in ETH.
      */
-    function createBid(uint256 tokenId) external payable override whenNotPaused {
+    function createBid(uint256 tokenId) external payable override whenNotPaused nonReentrant {
         IBeraAuctionHouse.Auction memory _auction = auctionStorage;
 
         (uint192 _reservePrice, uint56 _timeBuffer, uint8 _minBidIncrementPercentage) =
