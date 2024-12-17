@@ -140,7 +140,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         if (msg.value < _auction.amount + ((_auction.amount * _minBidIncrementPercentage) / 100)) {
             revert MustSendMoreThanLastBidByMinBidIncrementPercentageAmount();
         }
-        auctionStorage.amount = uint128(msg.value);
+        auctionStorage.amount = msg.value;
         auctionStorage.bidder = payable(msg.sender);
 
         // Extend the auction if the bid was received within `timeBuffer` of the auction end time
