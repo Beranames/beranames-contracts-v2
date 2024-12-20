@@ -47,6 +47,12 @@ interface IBeraAuctionHouse {
     /// @notice Thrown when the reserve price is being set to 0.
     error InvalidReservePrice();
 
+    /// @notice Thrown when the max auction count is being set to 0.
+    error MaxAuctionCountIsZero();
+
+    /// @notice Thrown when the max auction count is exceeded.
+    error MaxAuctionCountExceeded(uint256 auctionCount);
+
     struct Auction {
         uint256 tokenId;
         uint256 amount;
@@ -112,6 +118,8 @@ interface IBeraAuctionHouse {
     event AuctionMinBidIncrementPercentageUpdated(uint256 minBidIncrementPercentage);
 
     event AuctionCreationError(string reason);
+
+    event MaxAuctionCountUpdated(uint256 maxAuctionCount);
 
     /// @notice Emitted when the payment receiver is updated.
     ///

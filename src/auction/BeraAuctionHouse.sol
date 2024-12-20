@@ -38,6 +38,9 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
     uint256 public immutable auctionDuration;
     uint256 public immutable registrationDuration;
 
+    /// @notice the maximum number of auctions count to prevent excessive gas usage.
+    uint256 public maxAuctionCount;
+
     /// @notice The minimum price accepted in an auction
     uint192 public reservePrice;
 
@@ -85,6 +88,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         auctionDuration = auctionDuration_;
         registrationDuration = registrationDuration_;
         paymentReceiver = paymentReceiver_;
+        maxAuctionCount = 25;
 
         _pause();
 
@@ -113,6 +117,14 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      */
     function settleAuction() external override whenPaused onlyOwner {
         _settleAuction();
+    }
+
+    function setMaxAuctionCount(uint256 _maxAuctionCount) external whenNotPaused onlyOwner {
+        if (_maxAuctionCount == 0) revert MaxAuctionCountIsZero();
+
+        maxAuctionCount = _maxAuctionCount;
+
+        emit MaxAuctionCountUpdated(maxAuctionCount);
     }
 
     /**
@@ -348,6 +360,8 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * the tokenId of that auction, the winning bid amount, and the winner's address.
      */
     function getSettlements(uint256 auctionCount) external view returns (Settlement[] memory settlements) {
+        if (auctionCount > maxAuctionCount) revert MaxAuctionCountExceeded(auctionCount);
+
         uint256 latestTokenId = auctionStorage.tokenId;
         require(latestTokenId > 0, "No Auctions");
 
@@ -428,6 +442,10 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         view
         returns (Settlement[] memory settlements)
     {
+        if (startId > maxAuctionCount) {
+            revert MaxAuctionCountExceeded(startId);
+        }
+
         uint256 maxId = auctionStorage.tokenId;
         if (startId > maxId) {
             revert StartIdTooLarge(startId);
@@ -464,6 +482,10 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * the tokenId of that auction, the winning bid amount, and the winner's address.
      */
     function getSettlements(uint256 startId, uint256 endId) external view returns (Settlement[] memory settlements) {
+        if (startId > maxAuctionCount) {
+            revert MaxAuctionCountExceeded(startId);
+        }
+
         require(startId <= endId, "Invalid range");
         require(startId > 0 && endId > 0, "Range must be greater than 0");
 
