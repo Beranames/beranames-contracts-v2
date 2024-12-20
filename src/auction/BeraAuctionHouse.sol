@@ -498,12 +498,12 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
     /**
      * @dev Convert an ETH price of 256 bits with 18 decimals, to 64 bits with 10 decimals.
      * Max supported value is 1844674407.3709551615 ETH.
-     *
      */
     function ethPriceToUint64(uint256 ethPrice) internal pure returns (uint64) {
-        if (ethPrice > type(uint64).max * 1e8) revert PriceExceedsUint64Range(ethPrice);
+        uint256 scaled = ethPrice / 1e8;
+        if (scaled > type(uint64).max) revert PriceExceedsUint64Range(ethPrice);
 
-        return uint64(ethPrice / 1e8);
+        return uint64(scaled);
     }
 
     /**
