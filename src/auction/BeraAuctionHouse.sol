@@ -398,10 +398,14 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         SettlementState memory settlementState;
         for (uint256 id = latestTokenId; id > 0 && actualCount < auctionCount; --id) {
             settlementState = settlementHistory[id];
-            if (settlementState.blockTimestamp == 0) {
-                revert MissingSettlementsData();
+
+            // Skip auctions with no bids
+            if (
+                settlementState.blockTimestamp == 0 || settlementState.winner == address(0)
+                    || settlementState.amount == 0
+            ) {
+                continue;
             }
-            if (settlementState.winner == address(0) || settlementState.amount == 0) continue; // Skip auctions with no bids
 
             prices[actualCount] = uint64PriceToUint256(settlementState.amount);
             ++actualCount;
