@@ -111,7 +111,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * @notice Settle the current auction.
      * @dev This function can only be called when the contract is paused.
      */
-    function settleAuction() external override whenPaused onlyOwner {
+    function settleAuction() external override whenPaused onlyOwner nonReentrant {
         _settleAuction();
     }
 
