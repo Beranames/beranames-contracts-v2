@@ -47,6 +47,9 @@ interface IBeraAuctionHouse {
     /// @notice Thrown when the reserve price is being set to 0.
     error InvalidReservePrice();
 
+    /// @notice Thrown when the price exceeds the uint64 range.
+    error PriceExceedsUint64Range(uint256 price);
+
     struct Auction {
         uint256 tokenId;
         uint256 amount;
