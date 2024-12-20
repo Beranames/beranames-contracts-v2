@@ -501,6 +501,8 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      *
      */
     function ethPriceToUint64(uint256 ethPrice) internal pure returns (uint64) {
+        if (ethPrice > type(uint64).max * 1e8) revert PriceExceedsUint64Range(ethPrice);
+
         return uint64(ethPrice / 1e8);
     }
 
