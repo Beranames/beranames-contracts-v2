@@ -21,6 +21,9 @@ contract PriceOracle is IPriceOracle, Ownable {
     /// @notice Thrown when the price is too low.
     error PriceTooLow();
 
+    /// @notice Thrown when the Pyth contract is invalid.
+    error InvalidPyth();
+
     /// @notice Emitted when the minimum price in wei is set.
     event MinPriceInWeiSet(uint256 minPriceInWei_);
 
@@ -31,6 +34,8 @@ contract PriceOracle is IPriceOracle, Ownable {
     event PythSet(address pyth_);
 
     constructor(address pyth_, bytes32 beraUsdPythPriceFeedId_) Ownable(msg.sender) {
+        if (pyth_ == address(0)) revert InvalidPyth();
+
         pyth = IPyth(pyth_);
         beraUsdPythPriceFeedId = beraUsdPythPriceFeedId_;
     }
