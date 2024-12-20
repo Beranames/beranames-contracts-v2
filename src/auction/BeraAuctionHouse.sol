@@ -349,6 +349,8 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      */
     function getSettlements(uint256 auctionCount) external view returns (Settlement[] memory settlements) {
         uint256 latestTokenId = auctionStorage.tokenId;
+        require(latestTokenId > 0, "No Auctions");
+
         if (!auctionStorage.settled && latestTokenId > 0) {
             latestTokenId -= 1;
         }
@@ -384,6 +386,8 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      */
     function getPrices(uint256 auctionCount) external view returns (uint256[] memory prices) {
         uint256 latestTokenId = auctionStorage.tokenId;
+        require(latestTokenId > 0, "No Auctions");
+
         if (!auctionStorage.settled && latestTokenId > 0) {
             latestTokenId -= 1;
         }
@@ -397,7 +401,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
             if (settlementState.blockTimestamp == 0) {
                 revert MissingSettlementsData();
             }
-            if (settlementState.winner == address(0)) continue; // Skip auctions with no bids
+            if (settlementState.winner == address(0) || settlementState.amount == 0) continue; // Skip auctions with no bids
 
             prices[actualCount] = uint64PriceToUint256(settlementState.amount);
             ++actualCount;
