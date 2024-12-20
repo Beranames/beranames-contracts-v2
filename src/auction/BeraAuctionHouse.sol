@@ -464,6 +464,9 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * the tokenId of that auction, the winning bid amount, and the winner's address.
      */
     function getSettlements(uint256 startId, uint256 endId) external view returns (Settlement[] memory settlements) {
+        require(startId <= endId, "Invalid range");
+        require(startId > 0 && endId > 0, "Range must be greater than 0");
+
         SettlementState memory settlementState;
         for (uint256 id = startId; id < endId; ++id) {
             settlementState = settlementHistory[id];
