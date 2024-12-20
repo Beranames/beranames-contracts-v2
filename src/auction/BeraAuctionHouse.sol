@@ -358,13 +358,16 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         SettlementState memory settlementState;
         for (uint256 id = latestTokenId; settlements.length < auctionCount; --id) {
             settlementState = settlementHistory[id];
-
-            settlements[settlements.length] = Settlement({
-                blockTimestamp: settlementState.blockTimestamp,
-                amount: uint64PriceToUint256(settlementState.amount),
-                winner: settlementState.winner,
-                tokenId: id
-            });
+            if (
+                settlementState.blockTimestamp > 0 && settlementState.amount > 0 && settlementState.winner != address(0)
+            ) {
+                settlements[settlements.length] = Settlement({
+                    blockTimestamp: settlementState.blockTimestamp,
+                    amount: uint64PriceToUint256(settlementState.amount),
+                    winner: settlementState.winner,
+                    tokenId: id
+                });
+            }
 
             if (id == 0) break;
         }
@@ -428,7 +431,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
             settlementState = settlementHistory[id];
 
             // don't include the currently auctioned token if it hasn't settled
-            if ((id == maxId) && (settlementState.blockTimestamp <= 1)) {
+            if (id == maxId && settlementState.blockTimestamp <= 1 && settlementState.winner == address(0)) {
                 continue;
             }
 
@@ -456,13 +459,16 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         SettlementState memory settlementState;
         for (uint256 id = startId; id < endId; ++id) {
             settlementState = settlementHistory[id];
-
-            settlements[settlements.length] = Settlement({
-                blockTimestamp: settlementState.blockTimestamp,
-                amount: uint64PriceToUint256(settlementState.amount),
-                winner: settlementState.winner,
-                tokenId: id
-            });
+            if (
+                settlementState.blockTimestamp > 0 && settlementState.amount > 0 && settlementState.winner != address(0)
+            ) {
+                settlements[settlements.length] = Settlement({
+                    blockTimestamp: settlementState.blockTimestamp,
+                    amount: uint64PriceToUint256(settlementState.amount),
+                    winner: settlementState.winner,
+                    tokenId: id
+                });
+            }
         }
     }
 
