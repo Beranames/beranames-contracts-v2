@@ -12,7 +12,6 @@ import {BaseRegistrar} from "src/registrar/types/BaseRegistrar.sol";
 import {PriceOracle} from "src/registrar/types/PriceOracle.sol";
 import {UniversalResolver} from "src/resolver/UniversalResolver.sol";
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
-import {WhitelistValidator} from "src/registrar/types/WhitelistValidator.sol";
 import {MockPyth} from "@pythnetwork/pyth-sdk-solidity/MockPyth.sol";
 // interfaces
 import {IAddrResolver} from "src/resolver/interfaces/IAddrResolver.sol";
@@ -35,7 +34,6 @@ contract FlowTest is BaseTest {
     // Layer 3: Registrar Controller and Oracle
     RegistrarController public registrarController;
     PriceOracle public priceOracle;
-    WhitelistValidator public whitelistValidator;
     ReservedRegistry public reservedRegistry;
 
     // Universal Resolver
@@ -83,9 +81,6 @@ contract FlowTest is BaseTest {
         pyth = new MockPyth(60, 1);
         priceOracle = new PriceOracle(address(pyth), BERA_USD_PYTH_PRICE_FEED_ID);
 
-        // whitelistValidator
-        whitelistValidator = new WhitelistValidator(address(registrarAdmin), address(signer));
-
         // reservedRegistry
         reservedRegistry = new ReservedRegistry(address(deployer));
 
@@ -94,7 +89,8 @@ contract FlowTest is BaseTest {
             baseRegistrar,
             priceOracle,
             reverseRegistrar,
-            whitelistValidator,
+            whitelistSigner,
+            freeWhitelistSigner,
             reservedRegistry,
             address(deployer),
             BERA_NODE,

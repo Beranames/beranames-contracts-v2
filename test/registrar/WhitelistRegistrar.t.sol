@@ -34,13 +34,20 @@ contract WhitelistRegistrarTest is SystemTest {
         uint8 round_id = 1;
         uint8 round_total_mint = 1;
 
-        bytes memory payload =
-            abi.encode(request.owner, request.referrer, request.duration, request.name, round_id, round_total_mint);
-        bytes32 payloadHash = keccak256(payload);
-        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
-        bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, payloadHash));
+        bytes memory payload = abi.encode(
+            request.name,
+            request.owner,
+            request.duration,
+            request.resolver,
+            request.data,
+            request.reverseRecord,
+            request.referrer,
+            round_id,
+            round_total_mint
+        );
+        bytes32 payloadHash = generatePersonalPayloadHash(payload);
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, prefixedHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(whitelistSignerPk, payloadHash);
 
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -71,13 +78,20 @@ contract WhitelistRegistrarTest is SystemTest {
         uint8 round_id = 1;
         uint8 round_total_mint = 1;
 
-        bytes memory payload =
-            abi.encode(request.owner, request.referrer, request.duration, request.name, round_id, round_total_mint);
-        bytes32 payloadHash = keccak256(payload);
-        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
-        bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, payloadHash));
+        bytes memory payload = abi.encode(
+            request.name,
+            request.owner,
+            request.duration,
+            request.resolver,
+            request.data,
+            request.reverseRecord,
+            request.referrer,
+            round_id,
+            round_total_mint
+        );
+        bytes32 payloadHash = generatePersonalPayloadHash(payload);
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, prefixedHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(whitelistSignerPk, payloadHash);
 
         bytes memory signature = abi.encodePacked(r, s, v);
 
