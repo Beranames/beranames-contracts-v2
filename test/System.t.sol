@@ -567,10 +567,14 @@ contract SystemTest is BaseTest {
             DEFAULT_ROUND_ID,
             DEFAULT_ROUND_TOTAL_MINT
         );
-        bytes32 hash = keccak256(payload);
+        bytes32 hash = generatePersonalPayloadHash(payload);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(whitelistSignerPk, hash);
 
         return abi.encodePacked(r, s, v);
+    }
+
+    function generatePersonalPayloadHash(bytes memory payload) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", payload));
     }
 }

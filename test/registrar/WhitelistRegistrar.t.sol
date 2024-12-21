@@ -45,7 +45,7 @@ contract WhitelistRegistrarTest is SystemTest {
             round_id,
             round_total_mint
         );
-        bytes32 payloadHash = keccak256(payload);
+        bytes32 payloadHash = generatePersonalPayloadHash(payload);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(whitelistSignerPk, payloadHash);
 
@@ -89,7 +89,7 @@ contract WhitelistRegistrarTest is SystemTest {
             round_id,
             round_total_mint
         );
-        bytes32 payloadHash = keccak256(payload);
+        bytes32 payloadHash = generatePersonalPayloadHash(payload);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(whitelistSignerPk, payloadHash);
 

@@ -51,7 +51,7 @@ contract FreeWhitelistRegistrarTest is SystemTest {
             request.reverseRecord,
             request.referrer
         );
-        bytes32 payloadHash = keccak256(payload);
+        bytes32 payloadHash = generatePersonalPayloadHash(payload);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(freeWhitelistSignerPk, payloadHash);
 

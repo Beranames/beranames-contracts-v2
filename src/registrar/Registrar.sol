@@ -538,7 +538,7 @@ contract RegistrarController is Ownable, ReentrancyGuard {
             request.round_id,
             request.round_total_mint
         );
-        bytes32 payloadHash = keccak256(payload);
+        bytes32 payloadHash = generatePersonalPayloadHash(payload);
 
         if (usedSignatures[payloadHash]) revert SignatureAlreadyUsed();
         if (mintsCountByRoundByAddress[msg.sender][request.round_id] >= request.round_total_mint) {
@@ -569,7 +569,7 @@ contract RegistrarController is Ownable, ReentrancyGuard {
             request.reverseRecord,
             request.referrer
         );
-        bytes32 payloadHash = keccak256(payload);
+        bytes32 payloadHash = generatePersonalPayloadHash(payload);
 
         if (usedFreeMintsSignatures[payloadHash]) revert FreeMintSignatureAlreadyUsed();
         if (freeMintsByAddress[msg.sender] != 0) revert FreeMintLimitReached();
@@ -580,6 +580,10 @@ contract RegistrarController is Ownable, ReentrancyGuard {
 
         usedFreeMintsSignatures[payloadHash] = true;
         freeMintsByAddress[msg.sender]++;
+    }
+
+    function generatePersonalPayloadHash(bytes memory payload) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", payload));
     }
 
     function getSignerFromSignature(bytes32 payloadHash, bytes calldata signature) internal pure returns (address) {
