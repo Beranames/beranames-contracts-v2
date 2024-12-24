@@ -38,6 +38,12 @@ interface IBeraAuctionHouse {
     /// @notice Thrown when there is not enough history.
     error NotEnoughHistory();
 
+    /// @notice Thrown when there are no auctions.
+    error NoAuctions();
+
+    /// @notice Thrown when the provided range is invalid.
+    error InvalidRange();
+
     /// @notice Thrown when the start ID is too large.
     error StartIdTooLarge(uint256 startId);
 

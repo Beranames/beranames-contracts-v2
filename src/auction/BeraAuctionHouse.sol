@@ -295,7 +295,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * @dev If there are no bids, the tokenId is burned.
      */
     function _settleAuction() internal {
-        require(base.balanceOf(address(this)) > 0, "No Auctions");
+        if (base.balanceOf(address(this)) == 0) revert NoAuctions();
 
         IBeraAuctionHouse.Auction memory _auction = auctionStorage;
 
@@ -363,7 +363,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         if (auctionCount > maxAuctionCount) revert MaxAuctionCountExceeded(auctionCount);
 
         uint256 latestTokenId = auctionStorage.tokenId;
-        require(latestTokenId > 0, "No Auctions");
+        if (latestTokenId == 0) revert NoAuctions();
 
         if (!auctionStorage.settled && latestTokenId > 0) {
             latestTokenId -= 1;
@@ -400,7 +400,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      */
     function getPrices(uint256 auctionCount) external view returns (uint256[] memory prices) {
         uint256 latestTokenId = auctionStorage.tokenId;
-        require(latestTokenId > 0, "No Auctions");
+        if (latestTokenId == 0) revert NoAuctions();
 
         if (!auctionStorage.settled && latestTokenId > 0) {
             latestTokenId -= 1;
@@ -486,8 +486,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
             revert MaxAuctionCountExceeded(startId);
         }
 
-        require(startId <= endId, "Invalid range");
-        require(startId > 0 && endId > 0, "Range must be greater than 0");
+        if (startId > endId || startId == 0 || endId == 0) revert InvalidRange();
 
         SettlementState memory settlementState;
         for (uint256 id = startId; id < endId; ++id) {
