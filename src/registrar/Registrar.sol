@@ -583,7 +583,7 @@ contract RegistrarController is Ownable, ReentrancyGuard {
     }
 
     function generatePersonalPayloadHash(bytes memory payload) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", payload));
+        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(payload)));
     }
 
     function getSignerFromSignature(bytes32 payloadHash, bytes calldata signature) internal pure returns (address) {
