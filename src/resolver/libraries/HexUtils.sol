@@ -13,6 +13,8 @@ library HexUtils {
         pure
         returns (bytes32 r, bool valid)
     {
+        if ((lastIdx - idx) % 2 != 0) return (r, false);
+
         valid = true;
         assembly {
             // check that the index to read to is not past the end of the string
