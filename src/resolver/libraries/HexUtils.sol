@@ -14,6 +14,7 @@ library HexUtils {
         returns (bytes32 r, bool valid)
     {
         if ((lastIdx - idx) % 2 != 0) return (r, false);
+        if (idx >= lastIdx || lastIdx > str.length) return (bytes32(0), false);
 
         valid = true;
         assembly {
