@@ -31,6 +31,9 @@ error InvalidRegistry();
 /// @notice Thrown when the array lengths do not match.
 error ArrayLengthsMustMatch();
 
+/// @notice Thrown when the encrypted label length is invalid.
+error InvalidEncryptedLabelLength();
+
 struct MulticallData {
     bytes name;
     bytes[] data;
@@ -341,8 +344,24 @@ contract UniversalResolver is ERC165, Ownable {
             // 0x5d == ']'
             labelLength == 66 && name[offset + 1] == 0x5b && name[nextLabel - 1] == 0x5d
         ) {
-            // Encrypted label
-            (labelHash,) = bytes(name[offset + 2:nextLabel - 1]).hexStringToBytes32(0, 64);
+            // Validate the hex string is exactly 64 characters
+            bytes memory hexString = bytes(name[offset + 2:nextLabel - 1]);
+            if (hexString.length != 64) revert InvalidEncryptedLabelLength();
+
+            // Validate all characters are valid hex
+            for (uint256 i = 0; i < 64; i++) {
+                bytes1 char = hexString[i];
+                if (
+                    !(char >= 0x30 && char <= 0x39) // 0-9
+                        && !(char >= 0x41 && char <= 0x46) // A-F
+                        && !(char >= 0x61 && char <= 0x66) // a-f
+                ) {
+                    revert("Invalid hex character in encrypted label");
+                }
+            }
+
+            // Convert validated hex string to bytes32
+            (labelHash,) = hexString.hexStringToBytes32(0, 64);
         } else {
             labelHash = keccak256(name[offset + 1:nextLabel]);
         }
