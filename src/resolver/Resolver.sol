@@ -45,6 +45,12 @@ contract BeraDefaultResolver is
     /// @notice Thown when msg.sender tries to set itself as an operator/delegate.
     error CantSetSelf();
 
+    /// @notice Thown when the registrar controller is not set.
+    error InvalidRegistrarController();
+
+    /// @notice Thown when the reverse registrar is not set.
+    error InvalidReverseRegistrar();
+
     /// Storage ----------------------------------------------------------
 
     /// @notice The BNS registry.
@@ -101,6 +107,10 @@ contract BeraDefaultResolver is
     constructor(BNS bns_, address registrarController_, address reverseRegistrar_, address owner_) Ownable(owner_) {
         // Set state
         bns = bns_;
+
+        if (registrarController_ == address(0)) revert InvalidRegistrarController();
+        if (reverseRegistrar_ == address(0)) revert InvalidReverseRegistrar();
+
         registrarController = registrarController_;
         reverseRegistrar = reverseRegistrar_;
 
@@ -202,6 +212,8 @@ contract BeraDefaultResolver is
     ///
     /// @param registrarController_ The address of the new RegistrarController contract.
     function setRegistrarController(address registrarController_) external onlyOwner {
+        if (registrarController_ == address(0)) revert InvalidRegistrarController();
+
         registrarController = registrarController_;
         emit RegistrarControllerUpdated(registrarController_);
     }
@@ -212,6 +224,8 @@ contract BeraDefaultResolver is
     ///
     /// @param reverseRegistrar_ The address of the new ReverseRegistrar contract.
     function setReverseRegistrar(address reverseRegistrar_) external onlyOwner {
+        if (reverseRegistrar_ == address(0)) revert InvalidReverseRegistrar();
+
         reverseRegistrar = reverseRegistrar_;
         emit ReverseRegistrarUpdated(reverseRegistrar_);
     }
