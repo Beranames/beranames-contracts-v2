@@ -54,11 +54,21 @@ contract StringUtilsTest is Test {
         assertEq(actualCount, expectedCount, "Empty string character count should be zero");
     }
 
-    function test_invalidUTF8() public pure {
+    function test_invalidUTF8() public {
         // Malformed UTF-8 sequence (invalid start byte)
         bytes memory invalidBytes = hex"FF";
         string memory s = string(invalidBytes);
         uint256 expectedCount = 1; // Counts invalid byte as a character
+        vm.expectRevert(StringUtils.InvalidUTF8Byte.selector);
+        uint256 actualCount = s.strlen();
+        assertEq(actualCount, expectedCount, "Invalid UTF-8 character count mismatch");
+    }
+
+    function test_invalidContinuationByte() public {
+        bytes memory invalidBytes = "\xE2\x28\xA1";
+        string memory s = string(invalidBytes);
+        uint256 expectedCount = 1; // Counts invalid byte as a character
+        vm.expectRevert(StringUtils.InvalidUTF8Byte.selector);
         uint256 actualCount = s.strlen();
         assertEq(actualCount, expectedCount, "Invalid UTF-8 character count mismatch");
     }
