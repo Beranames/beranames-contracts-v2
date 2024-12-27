@@ -28,6 +28,9 @@ error ResolverWildcardNotSupported();
 /// @notice Thrown when the registry is invalid.
 error InvalidRegistry();
 
+/// @notice Thrown when the array lengths do not match.
+error ArrayLengthsMustMatch();
+
 struct MulticallData {
     bytes name;
     bytes[] data;
@@ -364,6 +367,8 @@ contract UniversalResolver is ERC165, Ownable {
 
     function _multicall(MulticallData memory multicallData) internal view returns (bytes[] memory results) {
         uint256 length = multicallData.data.length;
+        if (length != multicallData.failures.length) revert ArrayLengthsMustMatch();
+
         uint256 offchainCount = 0;
         OffchainLookupCallData[] memory callDatas = new OffchainLookupCallData[](length);
         OffchainLookupExtraData[] memory extraDatas = new OffchainLookupExtraData[](length);
