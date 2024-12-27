@@ -333,10 +333,21 @@ contract UniversalResolver is ERC165, Ownable {
     }
 
     function findResolver(bytes calldata name, uint256 offset) internal view returns (address, bytes32, uint256) {
+        // Add bounds checking for offset
+        if (offset >= name.length) {
+            return (address(0), bytes32(0), offset);
+        }
+
         uint256 labelLength = uint256(uint8(name[offset]));
         if (labelLength == 0) {
             return (address(0), bytes32(0), offset);
         }
+
+        // Add bounds checking for the full label range
+        if (offset + labelLength + 1 > name.length) {
+            return (address(0), bytes32(0), offset);
+        }
+
         uint256 nextLabel = offset + labelLength + 1;
         bytes32 labelHash;
         if (
