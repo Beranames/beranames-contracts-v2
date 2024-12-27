@@ -38,6 +38,9 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
     uint256 public immutable auctionDuration;
     uint256 public immutable registrationDuration;
 
+    /// @notice the maximum number of auctions count to prevent excessive gas usage.
+    uint256 public maxAuctionCount;
+
     /// @notice The minimum price accepted in an auction
     uint192 public reservePrice;
 
@@ -85,6 +88,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         auctionDuration = auctionDuration_;
         registrationDuration = registrationDuration_;
         paymentReceiver = paymentReceiver_;
+        maxAuctionCount = 25;
 
         _pause();
 
@@ -113,6 +117,14 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      */
     function settleAuction() external override whenPaused onlyOwner nonReentrant {
         _settleAuction();
+    }
+
+    function setMaxAuctionCount(uint256 _maxAuctionCount) external whenNotPaused onlyOwner {
+        if (_maxAuctionCount == 0) revert MaxAuctionCountIsZero();
+
+        maxAuctionCount = _maxAuctionCount;
+
+        emit MaxAuctionCountUpdated(maxAuctionCount);
     }
 
     /**
@@ -283,7 +295,7 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * @dev If there are no bids, the tokenId is burned.
      */
     function _settleAuction() internal {
-        require(base.balanceOf(address(this)) > 0, "No Auctions");
+        if (base.balanceOf(address(this)) == 0) revert NoAuctions();
 
         IBeraAuctionHouse.Auction memory _auction = auctionStorage;
 
@@ -348,34 +360,32 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * the tokenId of that auction, the winning bid amount, and the winner's address.
      */
     function getSettlements(uint256 auctionCount) external view returns (Settlement[] memory settlements) {
+        if (auctionCount > maxAuctionCount) revert MaxAuctionCountExceeded(auctionCount);
+
         uint256 latestTokenId = auctionStorage.tokenId;
+        if (latestTokenId == 0) revert NoAuctions();
+
         if (!auctionStorage.settled && latestTokenId > 0) {
             latestTokenId -= 1;
         }
 
-        settlements = new Settlement[](auctionCount);
-        uint256 actualCount = 0;
+        settlements = new Settlement[](0);
 
         SettlementState memory settlementState;
-        for (uint256 id = latestTokenId; actualCount < auctionCount; --id) {
+        for (uint256 id = latestTokenId; settlements.length < auctionCount; --id) {
             settlementState = settlementHistory[id];
-
-            settlements[actualCount] = Settlement({
-                blockTimestamp: settlementState.blockTimestamp,
-                amount: uint64PriceToUint256(settlementState.amount),
-                winner: settlementState.winner,
-                tokenId: id
-            });
-            ++actualCount;
+            if (
+                settlementState.blockTimestamp > 0 && settlementState.amount > 0 && settlementState.winner != address(0)
+            ) {
+                settlements[settlements.length] = Settlement({
+                    blockTimestamp: settlementState.blockTimestamp,
+                    amount: uint64PriceToUint256(settlementState.amount),
+                    winner: settlementState.winner,
+                    tokenId: id
+                });
+            }
 
             if (id == 0) break;
-        }
-
-        if (auctionCount > actualCount) {
-            // this assembly trims the observations array, getting rid of unused cells
-            assembly {
-                mstore(settlements, actualCount)
-            }
         }
     }
 
@@ -390,6 +400,8 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      */
     function getPrices(uint256 auctionCount) external view returns (uint256[] memory prices) {
         uint256 latestTokenId = auctionStorage.tokenId;
+        if (latestTokenId == 0) revert NoAuctions();
+
         if (!auctionStorage.settled && latestTokenId > 0) {
             latestTokenId -= 1;
         }
@@ -400,10 +412,14 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         SettlementState memory settlementState;
         for (uint256 id = latestTokenId; id > 0 && actualCount < auctionCount; --id) {
             settlementState = settlementHistory[id];
-            if (settlementState.blockTimestamp == 0) {
-                revert MissingSettlementsData();
+
+            // Skip auctions with no bids
+            if (
+                settlementState.blockTimestamp == 0 || settlementState.winner == address(0)
+                    || settlementState.amount == 0
+            ) {
+                continue;
             }
-            if (settlementState.winner == address(0)) continue; // Skip auctions with no bids
 
             prices[actualCount] = uint64PriceToUint256(settlementState.amount);
             ++actualCount;
@@ -426,38 +442,33 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
         view
         returns (Settlement[] memory settlements)
     {
+        if (startId > maxAuctionCount) {
+            revert MaxAuctionCountExceeded(startId);
+        }
+
         uint256 maxId = auctionStorage.tokenId;
         if (startId > maxId) {
             revert StartIdTooLarge(startId);
         }
 
-        settlements = new Settlement[](maxId - startId + 1);
-        uint256 actualCount = 0;
+        settlements = new Settlement[](0);
         SettlementState memory settlementState;
         for (uint256 id = startId; id <= maxId; ++id) {
             settlementState = settlementHistory[id];
 
             // don't include the currently auctioned token if it hasn't settled
-            if ((id == maxId) && (settlementState.blockTimestamp <= 1)) {
+            if (id == maxId && settlementState.blockTimestamp <= 1 && settlementState.winner == address(0)) {
                 continue;
             }
 
             if (settlementState.blockTimestamp > endTimestamp) break;
 
-            settlements[actualCount] = Settlement({
+            settlements[settlements.length] = Settlement({
                 blockTimestamp: settlementState.blockTimestamp,
                 amount: uint64PriceToUint256(settlementState.amount),
                 winner: settlementState.winner,
                 tokenId: id
             });
-            ++actualCount;
-        }
-
-        if (settlements.length > actualCount) {
-            // this assembly trims the settlements array, getting rid of unused cells
-            assembly {
-                mstore(settlements, actualCount)
-            }
         }
     }
 
@@ -471,26 +482,24 @@ contract BeraAuctionHouse is IBeraAuctionHouse, Pausable, ReentrancyGuard, Ownab
      * the tokenId of that auction, the winning bid amount, and the winner's address.
      */
     function getSettlements(uint256 startId, uint256 endId) external view returns (Settlement[] memory settlements) {
-        settlements = new Settlement[](endId - startId);
-        uint256 actualCount = 0;
+        if (startId > maxAuctionCount) {
+            revert MaxAuctionCountExceeded(startId);
+        }
+
+        if (startId > endId || startId == 0 || endId == 0) revert InvalidRange();
 
         SettlementState memory settlementState;
         for (uint256 id = startId; id < endId; ++id) {
             settlementState = settlementHistory[id];
-
-            settlements[actualCount] = Settlement({
-                blockTimestamp: settlementState.blockTimestamp,
-                amount: uint64PriceToUint256(settlementState.amount),
-                winner: settlementState.winner,
-                tokenId: id
-            });
-            ++actualCount;
-        }
-
-        if (settlements.length > actualCount) {
-            // this assembly trims the settlements array, getting rid of unused cells
-            assembly {
-                mstore(settlements, actualCount)
+            if (
+                settlementState.blockTimestamp > 0 && settlementState.amount > 0 && settlementState.winner != address(0)
+            ) {
+                settlements[settlements.length] = Settlement({
+                    blockTimestamp: settlementState.blockTimestamp,
+                    amount: uint64PriceToUint256(settlementState.amount),
+                    winner: settlementState.winner,
+                    tokenId: id
+                });
             }
         }
     }

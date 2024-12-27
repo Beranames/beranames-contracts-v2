@@ -38,6 +38,12 @@ interface IBeraAuctionHouse {
     /// @notice Thrown when there is not enough history.
     error NotEnoughHistory();
 
+    /// @notice Thrown when there are no auctions.
+    error NoAuctions();
+
+    /// @notice Thrown when the provided range is invalid.
+    error InvalidRange();
+
     /// @notice Thrown when the start ID is too large.
     error StartIdTooLarge(uint256 startId);
 
@@ -46,6 +52,12 @@ interface IBeraAuctionHouse {
 
     /// @notice Thrown when the reserve price is being set to 0.
     error InvalidReservePrice();
+
+    /// @notice Thrown when the max auction count is being set to 0.
+    error MaxAuctionCountIsZero();
+
+    /// @notice Thrown when the max auction count is exceeded.
+    error MaxAuctionCountExceeded(uint256 auctionCount);
 
     /// @notice Thrown when the price exceeds the uint64 range.
     error PriceExceedsUint64Range(uint256 price);
@@ -115,6 +127,8 @@ interface IBeraAuctionHouse {
     event AuctionMinBidIncrementPercentageUpdated(uint256 minBidIncrementPercentage);
 
     event AuctionCreationError(string reason);
+
+    event MaxAuctionCountUpdated(uint256 maxAuctionCount);
 
     /// @notice Emitted when the payment receiver is updated.
     ///
