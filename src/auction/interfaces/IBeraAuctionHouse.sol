@@ -59,6 +59,9 @@ interface IBeraAuctionHouse {
     /// @notice Thrown when the max auction count is exceeded.
     error MaxAuctionCountExceeded(uint256 auctionCount);
 
+    /// @notice Thrown when the price exceeds the uint64 range.
+    error PriceExceedsUint64Range(uint256 price);
+
     struct Auction {
         uint256 tokenId;
         uint256 amount;
