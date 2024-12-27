@@ -14,8 +14,19 @@ abstract contract Multicallable is IMulticallable, ERC165 {
                 bytes32 txNamehash = bytes32(data[i][4:36]);
                 require(txNamehash == nodehash, "multicall: All records must have a matching namehash");
             }
+
             (bool success, bytes memory result) = address(this).delegatecall(data[i]);
-            require(success);
+            if (!success) {
+                if (result.length > 0) {
+                    assembly {
+                        let revertDataSize := mload(result)
+                        revert(add(result, 32), revertDataSize)
+                    }
+                } else {
+                    revert("Multicall delegatecall failed without a reason");
+                }
+            }
+
             results[i] = result;
         }
         return results;
