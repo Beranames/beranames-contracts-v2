@@ -16,11 +16,17 @@ import {NameEncoder} from "src/resolver/libraries/NameEncoder.sol";
 import {BytesUtils} from "src/resolver/libraries/BytesUtils.sol";
 import {HexUtils} from "src/resolver/libraries/HexUtils.sol";
 
+/// @notice Thrown when the offchain lookup fails.
 error OffchainLookup(address sender, string[] urls, bytes callData, bytes4 callbackFunction, bytes extraData);
 
+/// @notice Thrown when the resolver is not found.
 error ResolverNotFound();
 
+/// @notice Thrown when the resolver wildcard is not supported.
 error ResolverWildcardNotSupported();
+
+/// @notice Thrown when the registry is invalid.
+error InvalidRegistry();
 
 struct MulticallData {
     bytes name;
@@ -64,6 +70,8 @@ contract UniversalResolver is ERC165, Ownable {
     BNS public immutable registry;
 
     constructor(address _registry, string[] memory _urls) Ownable(msg.sender) {
+        if (_registry == address(0)) revert InvalidRegistry();
+
         registry = BNS(_registry);
         batchGatewayURLs = _urls;
     }

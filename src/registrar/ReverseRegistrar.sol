@@ -22,6 +22,8 @@ contract ReverseRegistrar is Controllable, IReverseRegistrar {
      * @param registry_ The address of the BNS registry.
      */
     constructor(BNS registry_) Controllable(msg.sender) {
+        if (address(registry_) == address(0)) revert InvalidRegistry();
+
         registry = registry_;
         // Note: caller needs to assign ownership of the reverse record to the registrar
     }
