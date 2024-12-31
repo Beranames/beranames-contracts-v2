@@ -17,8 +17,9 @@ import {IReservedRegistry} from "src/registrar/interfaces/IReservedRegistry.sol"
 
 import {BERA_NODE, GRACE_PERIOD} from "src/utils/Constants.sol";
 import {StringUtils} from "src/utils/StringUtils.sol";
-
+import {console} from "forge-std/console.sol";
 /// @title Registrar Controller
+
 contract RegistrarController is Ownable, ReentrancyGuard {
     using StringUtils for string;
     using SafeERC20 for IERC20;
@@ -305,6 +306,7 @@ contract RegistrarController is Ownable, ReentrancyGuard {
         prices = prices_;
         reverseRegistrar = reverseRegistrar_;
         if (whitelistSigner_ == address(0)) revert InvalidWhitelistSigner();
+        console.log("whitelistSigner_", whitelistSigner_);
         whitelistAuthorizer = whitelistSigner_;
         if (freeWhitelistSigner_ == address(0)) revert InvalidFreeWhitelistSigner();
         freeWhitelistAuthorizer = freeWhitelistSigner_;
