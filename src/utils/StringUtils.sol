@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 library StringUtils {
+    error InvalidUTF8Byte();
+
     function utf8Length(string memory s) internal pure returns (uint256) {
         return bytes(s).length;
     }
@@ -58,20 +60,26 @@ library StringUtils {
         return len;
     }
 
-    // Determines the length of a UTF-8 encoded character in bytes
+    // Determines the length of a UTF-8 encoded character in bytes with validation
     function _charLength(bytes memory strBytes, uint256 index) private pure returns (uint256) {
         uint8 b = uint8(strBytes[index]);
 
         if (b < 0x80) {
             return 1; // 1-byte character (ASCII)
-        } else if (b < 0xE0) {
+        } else if (b < 0xE0 && index + 1 < strBytes.length && uint8(strBytes[index + 1]) & 0xC0 == 0x80) {
             return 2; // 2-byte character
-        } else if (b < 0xF0) {
+        } else if (
+            b < 0xF0 && index + 2 < strBytes.length && uint8(strBytes[index + 1]) & 0xC0 == 0x80
+                && uint8(strBytes[index + 2]) & 0xC0 == 0x80
+        ) {
             return 3; // 3-byte character
-        } else if (b < 0xF8) {
+        } else if (
+            b < 0xF8 && index + 3 < strBytes.length && uint8(strBytes[index + 1]) & 0xC0 == 0x80
+                && uint8(strBytes[index + 2]) & 0xC0 == 0x80 && uint8(strBytes[index + 3]) & 0xC0 == 0x80
+        ) {
             return 4; // 4-byte character (including emojis)
         } else {
-            return 1; // Fallback for invalid UTF-8 byte
+            revert InvalidUTF8Byte();
         }
     }
 
