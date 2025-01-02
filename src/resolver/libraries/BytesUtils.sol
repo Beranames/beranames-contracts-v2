@@ -23,12 +23,51 @@ library BytesUtils {
      * @return The namehash of the name.
      */
     function namehash(bytes memory self, uint256 offset) internal pure returns (bytes32) {
-        (bytes32 labelhash, uint256 newOffset) = readLabel(self, offset);
-        if (labelhash == bytes32(0)) {
-            require(offset == self.length - 1, "namehash: Junk at end of name");
-            return bytes32(0);
+        // First count the number of labels
+        uint256 labelCount = 0;
+        uint256 countOffset = offset;
+
+        while (countOffset < self.length) {
+            bytes32 labelhash;
+            uint256 newOffset;
+            (labelhash, newOffset) = readLabel(self, countOffset);
+
+            if (labelhash == bytes32(0)) {
+                break;
+            }
+
+            labelCount++;
+            countOffset = newOffset;
         }
-        return keccak256(abi.encodePacked(namehash(self, newOffset), labelhash));
+
+        // Then find all label hashes
+        bytes32[] memory labels = new bytes32[](labelCount);
+        uint256 currentOffset = offset;
+        uint256 index = 0;
+
+        while (currentOffset < self.length) {
+            bytes32 labelhash;
+            uint256 newOffset;
+            (labelhash, newOffset) = readLabel(self, currentOffset);
+
+            if (labelhash == bytes32(0)) {
+                require(currentOffset == self.length - 1, "namehash: Junk at end of name");
+                break;
+            }
+
+            labels[index] = labelhash;
+            index++;
+            currentOffset = newOffset;
+        }
+
+        // Finally compute namehash from right to left
+        bytes32 node = bytes32(0);
+        while (labelCount > 0) {
+            labelCount--;
+            node = keccak256(abi.encodePacked(node, labels[labelCount]));
+        }
+
+        return node;
     }
 
     /**
