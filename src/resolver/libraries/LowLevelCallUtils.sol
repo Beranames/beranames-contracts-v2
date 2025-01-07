@@ -36,10 +36,14 @@ library LowLevelCallUtils {
      * @dev Reads return data from the most recent external call.
      * @param offset Offset into the return data.
      * @param length Number of bytes to return.
+     * @return data The copied return data
+     * @dev Reverts if offset + length exceeds returndatasize
      */
     function readReturnData(uint256 offset, uint256 length) internal pure returns (bytes memory data) {
         data = new bytes(length);
         assembly {
+            // Validate that offset + length <= returndatasize()
+            if gt(add(offset, length), returndatasize()) { revert(0, 0) }
             returndatacopy(add(data, 32), offset, length)
         }
     }
