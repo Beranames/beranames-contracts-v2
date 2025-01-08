@@ -197,28 +197,6 @@ contract BaseRegistrar is ERC721, Ownable {
         registry.setResolver(baseNode, resolver);
     }
 
-    /// @notice Register a name.
-    ///
-    /// @param id The token id determined by keccak256(label).
-    /// @param owner The address that should own the registration.
-    /// @param duration Duration in seconds for the registration.
-    ///
-    /// @return The expiry date of the registered name.
-    function register(uint256 id, address owner, uint256 duration) external returns (uint256) {
-        return _register(id, owner, duration, true);
-    }
-
-    /// @notice Register a name without modifying the Registry.
-    ///
-    /// @param id The token id determined by keccak256(label).
-    /// @param owner The address that should own the registration.
-    /// @param duration Duration in seconds for the registration.
-    ///
-    /// @return The expiry date of the registered name.
-    function registerOnly(uint256 id, address owner, uint256 duration) external returns (uint256) {
-        return _register(id, owner, duration, false);
-    }
-
     /// @notice Register a name and add details to the record in the Registry.
     /// @param id The token id determined by keccak256(label).
     /// @param owner The address that should own the registration.
