@@ -43,7 +43,7 @@ contract ContractScript is Script {
     // TODO: Update these with the correct addresses
     address public deployer = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
     address public registrarAdmin = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
-    address public whitelistSigner = address(0x7F007E417d5929CE6E3fc29c98f9E5a4485bc346);
+    address public whitelistSigner = address(0x3B5Ed4CE5189DE93Aa4A91b8096BD34457d9634b);
     address public freeWhitelistSigner = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
 
     function setUp() public {}
