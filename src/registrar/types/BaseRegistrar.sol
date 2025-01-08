@@ -270,7 +270,6 @@ contract BaseRegistrar is ERC721, Ownable {
         return expires;
     }
 
-
     /// @notice ERC165 compliant signal for interface support.
     /// @param interfaceID the ERC165 iface id being checked for compliance
     /// @return bool Whether this contract supports the provided interfaceID
