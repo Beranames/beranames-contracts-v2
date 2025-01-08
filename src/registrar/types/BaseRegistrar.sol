@@ -270,15 +270,6 @@ contract BaseRegistrar is ERC721, Ownable {
         return expires;
     }
 
-    /// @notice Reclaim ownership of a name in BNS registry, if you own it in the registrar.
-    /// @param id The id of the name to reclaim.
-    /// @param owner The address of the owner that will be set in the Registry.
-    function reclaim(uint256 id, address owner) external live {
-        if (!_isApprovedOrOwner(msg.sender, id)) {
-            revert NotApprovedOwner(id, owner);
-        }
-        registry.setSubnodeOwner(baseNode, bytes32(id), owner);
-    }
 
     /// @notice ERC165 compliant signal for interface support.
     /// @param interfaceID the ERC165 iface id being checked for compliance
