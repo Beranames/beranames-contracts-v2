@@ -51,6 +51,9 @@ contract BeraDefaultResolver is
     /// @notice Thown when the reverse registrar is not set.
     error InvalidReverseRegistrar();
 
+    /// @notice Thown when the caller is not the owner of the node.
+    error NotOwner();
+
     /// Storage ----------------------------------------------------------
 
     /// @notice The BNS registry.
@@ -135,14 +138,14 @@ contract BeraDefaultResolver is
 
     /// @notice Modify the permissions for a specified `delegate` for the specified `node`.
     ///
-    /// @dev This method only sets the approval status for msg.sender's nodes. This is performed without checking
-    ///     the ownership of the specified `node`.
+    /// @dev This method only sets the approval status for msg.sender's nodes.
     ///
     /// @param node The namehash `node` whose permissions are being updated.
     /// @param delegate The address of the `delegate`
     /// @param approved Whether the `delegate` has approval to modify records for `msg.sender`'s `node`.
     function approve(bytes32 node, address delegate, bool approved) external {
         if (msg.sender == delegate) revert CantSetSelf();
+        if (msg.sender != bns.owner(node)) revert NotOwner();
 
         _tokenApprovals[msg.sender][node][delegate] = approved;
         emit Approved(msg.sender, node, delegate, approved);
