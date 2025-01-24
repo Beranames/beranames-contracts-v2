@@ -129,7 +129,35 @@ where:
 
 The subdomain will be registered under the parent node and the label provided. The subdomain will have its own resolver, and the owner of the subdomain will be able to update it at any time. If the resolver is not provided, the resolver of the parent node will be found during the resolution process provided that the **universal resolver** is used.
 
-In order to "delete" a subdomain, the owner of the subdomain can call the `setSubnodeRecord` function of the BNS registry with the same parent node, label, and setting the owner and the others record associated to the subdomain to the zero address.
+In order to "delete" a subdomain, the owner of the parent domain can call the `setSubnodeRecord` function of the BNS registry with the same parent node, label, and setting the owner and the others record associated to the subdomain to the zero address.
 If more records than the resolver have been set for the subdomain, they will need to be explicity "deleted" by setting them to the zero address using the `set*` functions of the resolver.
 
 To reclaim and register the same subdomain again it will be sufficient to call the `setSubnodeRecord` function of the BNS registry with the same parent node and label.
+
+### Resolving subdomains
+
+It is totally possible to resolve a subdomain to another address, even if that address is not the owner of the subdomain.
+This is done by setting the addr record of the subdomain to the address you want to resolve to.
+
+```solidity
+   resolver.setAddr(subnode, address(bob));
+```
+
+where `subnode` is the node of the subdomain.
+
+and then you can resolve the subdomain to the address you want by using the universal resolver.
+
+```solidity
+   universalResolver.resolve(bytes calldata name, bytes calldata data) external view returns (bytes)
+```
+
+where `name` is the dnsEncoded name of the subdomain and `data` is the ABI-encoded call data for the resolution function required - for example, the ABI encoding of `addr(namehash(name))` when resolving the `addr` record.
+
+This is useful for example to forward the resolution of a subdomain to another address, or to resolve a subdomain to an address that is not the owner of the subdomain.
+
+### Text Records
+
+Text records on subdomains works the same way as text records on the parent domain.
+Pay attention to the fact that text records are stored in the subdomain, not in the parent domain. So unlike ownership, text records are only managed by the owner of the subdomain node.
+
+The parent node owner won't be able to set text records on the subdomain node unless they are the owner of the subdomain node.
