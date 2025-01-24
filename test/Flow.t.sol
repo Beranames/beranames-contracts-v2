@@ -315,6 +315,39 @@ contract FlowTest is BaseTest {
         resolver.setAddr(subnode, address(chris));
     }
 
+    function test_subdomain_is_not_available() public prank(alice) {
+        bytes32 nameNode = registerAndSetAddr(alice);
+        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(bob), address(0), 0);
+        bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(bytes("sub"))));
+        assertEq(registry.owner(subnode), address(bob), "subnode owner is bob");
+        assertEq(registry.recordExists(subnode), true, "subnode exists");
+    }
+
+    function test_subdomain_text_records() public prank(alice) {
+        bytes32 nameNode = registerAndSetAddr(alice);
+        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(alice), address(resolver), 0);
+        bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(bytes("sub"))));
+        resolver.setText(subnode, "com.discord", "_cien_");
+        assertEq(resolver.text(subnode, "com.discord"), "_cien_", "text record set");
+    }
+
+    function test_subdomains_forward_resolution_with_parent_resolver_to_other_address_success() public prank(alice) {
+        bytes32 nameNode = registerAndSetAddr(alice);
+        // leave the resolver address as 0, so the subdomain will be resolved by the parent resolver
+        registry.setSubnodeRecord(nameNode, keccak256(bytes("sub")), address(alice), address(0), 0);
+        bytes32 subnode = keccak256(abi.encodePacked(nameNode, keccak256(bytes("sub"))));
+        // set the addr for the subdomain to resolve to bob
+        resolver.setAddr(subnode, address(bob));
+        // dns encode name
+        (bytes memory dnsEncName,) = NameEncoder.dnsEncodeName("sub.cien.bera");
+        // resolve
+        (bytes memory res_, address calledResolver_) =
+            universalResolver.resolve(dnsEncName, abi.encodeWithSelector(IAddrResolver.addr.selector, subnode));
+        address addr = abi.decode(res_, (address));
+        assertEq(addr, address(bob), "subdomain resolves to bob");
+        assertEq(calledResolver_, address(resolver), "called BeraDefaultResolver, the parent resolver");
+    }
+
     // TEXT RECORDS TESTS ------------------------------------------------------------------------------------------------
 
     function test_owner_can_set_text_record_success() public prank(alice) {
