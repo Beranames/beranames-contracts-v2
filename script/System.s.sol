@@ -45,6 +45,8 @@ contract ContractScript is Script {
     address public registrarAdmin = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
     address public whitelistSigner = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
     address public freeWhitelistSigner = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+    address public reservedNamesMinter = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+    address public paymentReceiver = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
 
     function setUp() public {}
 
@@ -59,8 +61,8 @@ contract ContractScript is Script {
             registry,
             address(deployer),
             BERA_NODE,
-            "https://beranames-v3.vercel.app/metadata/berachain-testnet-b-artio/", // bartio-testnet
-            "https://beranames-v3.vercel.app/metadata/berachain-testnet-b-artio/collection" // bartio-testnet collection
+            "https://beranames.com/metadata/berachain-testnet-b-artio/", // bartio-testnet
+            "https://beranames.com/metadata/berachain-testnet-b-artio/collection" // bartio-testnet collection
                 // "https://www.beranames.com/metadata/berachain-mainnet/", // berachain-mainnet
                 // "https://www.beranames.com/metadata/berachain-mainnet/collection" // berachain-mainnet collection
         );
@@ -93,7 +95,7 @@ contract ContractScript is Script {
         // Create the PriceOracle
         // TODO: use pyth for mainnet
         // address pythAddress = 0x2880aB155794e7179c9eE2e38200202908C17B43;
-        // bytes32 beraUsdPythPriceFeedId = 0x40dd8c66a9582c51a1b03a41d6c68ee5c2c04c8b9c054e81d0f95602ffaefe2f;
+        // bytes32 beraUsdPythPriceFeedId = 0xB72vp52SUipn1gaBadkBk5MSMjMqS8gSaNUz4jBkAm9E;
         // priceOracle = new PriceOracle(pythAddress, beraUsdPythPriceFeedId);
 
         priceOracle = new bArtioPriceOracle();
@@ -112,10 +114,11 @@ contract ContractScript is Script {
             address(registrarAdmin),
             BERA_NODE,
             ".bera",
-            address(registrarAdmin)
+            paymentReceiver
         );
         baseRegistrar.addController(address(registrar));
         resolver.setRegistrarController(address(registrar));
+        registrar.setReservedNamesMinter(reservedNamesMinter);
 
         // Deploy the auction house
         auctionHouse = new BeraAuctionHouse(
@@ -127,7 +130,7 @@ contract ContractScript is Script {
             1 ether,
             10 seconds,
             1,
-            address(registrarAdmin)
+            paymentReceiver
         );
         auctionHouse.transferOwnership(address(registrarAdmin));
         baseRegistrar.addController(address(auctionHouse));

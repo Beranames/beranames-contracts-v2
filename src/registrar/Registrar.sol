@@ -590,6 +590,24 @@ contract RegistrarController is Ownable, ReentrancyGuard {
         return ECDSA.recover(payloadHash, signature);
     }
 
+    /// @notice Get the whitelist authorizer.
+    /// @return The address of the whitelist authorizer.
+    function getWhitelistAuthorizer() public view returns (address) {
+        return whitelistAuthorizer;
+    }
+
+    /// @notice Get the free whitelist authorizer.
+    /// @return The address of the free whitelist authorizer.
+    function getFreeWhitelistAuthorizer() public view returns (address) {
+        return freeWhitelistAuthorizer;
+    }
+
+    /// @notice Get the reserved names minter.
+    /// @return The address of the reserved names minter.
+    function getReservedNamesMinter() public view returns (address) {
+        return reservedNamesMinter;
+    }
+
     /// @notice Helper for deciding whether to include a launch-premium.
     ///
     /// @dev If the token returns a `0` expiry time, it hasn't been registered before. On launch, this will be true for all
