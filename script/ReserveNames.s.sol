@@ -5,18 +5,25 @@ import {Script} from "forge-std/Script.sol";
 
 import {ReservedRegistry} from "src/registrar/types/ReservedRegistry.sol";
 import {RegistrarController} from "src/registrar/Registrar.sol";
+import {console} from "forge-std/console.sol";
 
 // call this contract with registradAdmin pkey
-contract ContractScript2 is Script {
-    address public reservedRegistryAddress = 0x2873D5DEb061f2f261543ef7b9e61f47C58306ef; // TODO: SET
-    ReservedRegistry public reservedRegistry = new ReservedRegistry(reservedRegistryAddress);
+contract ReserveNames is Script {
+    address public reservedRegistryAddress = 0x0000000000000000000000000000000000000000;
+    ReservedRegistry public reservedRegistry = ReservedRegistry(reservedRegistryAddress);
 
     function run() public {
         vm.startBroadcast();
 
-        reservedRegistry.setReservedName("beranames");
-        reservedRegistry.setReservedName("berakin");
-        reservedRegistry.setReservedName("kin");
+        string[2] memory names = ["a", "b"];
+
+        for (uint256 i = 0; i < names.length; i++) {
+            if (reservedRegistry.isReservedName(names[i])) {
+                console.log("Name already reserved");
+            } else {
+                reservedRegistry.setReservedName(names[i]);
+            }
+        }
 
         vm.stopBroadcast();
     }

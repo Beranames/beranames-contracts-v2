@@ -41,12 +41,13 @@ contract ContractScript is Script {
 
     // Addresses
     // TODO: Update these with the correct addresses
-    address public deployer = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
-    address public registrarAdmin = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
-    address public whitelistSigner = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
-    address public freeWhitelistSigner = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
-    address public reservedNamesMinter = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
-    address public paymentReceiver = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+    address public deployer = address(0x43aedB439F497b1d51D1b263D64Abf026B2Aed5c);
+    address public registrarAdmin = address(0x43aedB439F497b1d51D1b263D64Abf026B2Aed5c);
+    address public whitelistSigner = address(0xF55b0b6967Db9a0982A62EBCb5226FFbDDb80A6f);
+    address public freeWhitelistSigner = address(0xA14F63e834dd6b7944bCf68F76A508b617C19c39);
+    address public reservedNamesMinter = address(0x601aB37CA6E83643c342898a2cd22429467E74DA);
+    address public paymentReceiver = address(0x5D00bD26f1A6528417e11e2578cc83Ba0EE7Cb82);
+    uint256 public launchTime = 1739232000; // 11th Feb 2025 00:00:00 UTC - end of whitelist
 
     function setUp() public {}
 
@@ -61,10 +62,8 @@ contract ContractScript is Script {
             registry,
             address(deployer),
             BERA_NODE,
-            "https://beranames.com/metadata/berachain-testnet-b-artio/", // bartio-testnet
-            "https://beranames.com/metadata/berachain-testnet-b-artio/collection" // bartio-testnet collection
-                // "https://www.beranames.com/metadata/berachain-mainnet/", // berachain-mainnet
-                // "https://www.beranames.com/metadata/berachain-mainnet/collection" // berachain-mainnet collection
+            "https://www.beranames.com/api/metadata/berachain/",
+            "https://www.beranames.com/api/metadata/berachain/collection"
         );
 
         // Create the reverse registrar
@@ -94,14 +93,13 @@ contract ContractScript is Script {
         // Deploy layer 3 components: public registrar
         // Create the PriceOracle
         // TODO: use pyth for mainnet
-        // address pythAddress = 0x2880aB155794e7179c9eE2e38200202908C17B43;
-        // bytes32 beraUsdPythPriceFeedId = 0xB72vp52SUipn1gaBadkBk5MSMjMqS8gSaNUz4jBkAm9E;
-        // priceOracle = new PriceOracle(pythAddress, beraUsdPythPriceFeedId);
-
-        priceOracle = new bArtioPriceOracle();
+        address pythAddress = 0x2880aB155794e7179c9eE2e38200202908C17B43;
+        bytes32 beraUsdPythPriceFeedId = hex"962088abcfdbdb6e30db2e340c8cf887d9efb311b1f2f17b155a63dbb6d40265";
+        priceOracle = new PriceOracle(pythAddress, beraUsdPythPriceFeedId);
 
         // Create the reserved registry
         reservedRegistry = new ReservedRegistry(address(registrarAdmin));
+        reservedRegistry.setReservedName("kin");
 
         // Create the registrar, set the resolver, and set as a controller
         registrar = new RegistrarController(
@@ -116,6 +114,8 @@ contract ContractScript is Script {
             ".bera",
             paymentReceiver
         );
+        registrar.setLaunchTime(launchTime);
+
         baseRegistrar.addController(address(registrar));
         resolver.setRegistrarController(address(registrar));
         registrar.setReservedNamesMinter(reservedNamesMinter);
@@ -135,9 +135,6 @@ contract ContractScript is Script {
         auctionHouse.transferOwnership(address(registrarAdmin));
         baseRegistrar.addController(address(auctionHouse));
 
-        // TODO: Add test domains / initial mints here
-        reservedRegistry.setReservedName("reserved");
-
         // Deploy the Universal Resovler
         string[] memory urls = new string[](0);
         universalResolver = new UniversalResolver(address(registry), urls);
@@ -154,6 +151,7 @@ contract ContractScript is Script {
         reverseRegistrar.setDefaultResolver(address(resolver));
         reverseRegistrar.transferOwnership(address(registrarAdmin));
         resolver.transferOwnership(address(registrarAdmin));
+        // priceOracle.transferOwnership(address(registrarAdmin));
 
         // Stop broadcast
         vm.stopBroadcast();
